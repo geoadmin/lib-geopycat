@@ -39,3 +39,19 @@ LANG_ISO = {
     "eng": "EN",
     "roh": "RM"
 }
+
+SEARCH_UUID_API_BODY = {
+    "from": 0,
+    "query": {
+        "bool": {
+            "must": []
+        }
+    },
+    "_source": {
+        "includes": [
+            "uuid"
+        ]
+    },
+    "track_total_hits": True,
+    "sort": {"_id": "asc"},
+}
