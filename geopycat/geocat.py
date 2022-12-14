@@ -10,6 +10,7 @@ import requests
 import urllib3
 from dotenv import load_dotenv
 import psycopg2
+import copy
 from geopycat import settings
 from geopycat import utils
 
@@ -30,8 +31,9 @@ class GeocatAPI():
         if env == 'prod':
             print(utils.warningred("WARNING : you choose the Production environment ! Be careful, all changes will be live on geocat.ch"))
         self.env = settings.ENV[env]
-        self.__username = input("Geocat Username : ")
-        self.__password = getpass.getpass("Geocat Password : ")
+        self.__username = input("Geocat Username or press enter to continue without login: ")
+        if self.__username != "":
+            self.__password = getpass.getpass("Geocat Password : ")
         self.session = self.__get_token()
 
     def __get_token(self) -> object:
@@ -39,7 +41,8 @@ class GeocatAPI():
         session = requests.Session()
         session.cookies.clear()
 
-        session.auth = (self.__username, self.__password)
+        if self.__username != "":
+            session.auth = (self.__username, self.__password)
 
         for proxies in settings.PROXY:
             try:
@@ -55,16 +58,18 @@ class GeocatAPI():
         token = cookies["XSRF-TOKEN"]
         session.headers.update({"X-XSRF-TOKEN": token})
 
-        response = session.post(url=self.env + '/geonetwork/srv/eng/info?type=me')
+        if self.__username != "":
 
-        if response.status_code != 200:
-            print(utils.warningred('Username or password not valid !'))
-            sys.exit()
+            response = session.post(url=self.env + '/geonetwork/srv/eng/info?type=me')
 
-        xmlroot = ET.fromstring(response.text)
-        if xmlroot.find("me").attrib["authenticated"] != "true":
-            print(utils.warningred('Username or password not valid !'))
-            sys.exit()
+            if response.status_code != 200:
+                print(utils.warningred('Username or password not valid !'))
+                sys.exit()
+
+            xmlroot = ET.fromstring(response.text)
+            if xmlroot.find("me").attrib["authenticated"] != "true":
+                print(utils.warningred('Username or password not valid !'))
+                sys.exit()
 
         return session
 
@@ -72,8 +77,7 @@ class GeocatAPI():
         """Connect to geocat DB and returns a psycopg2 connection object"""
 
         # Access database credentials from .env variable if exist
-        env_path = os.path.join(os.path.dirname(__file__), '.env')
-        load_dotenv(dotenv_path=env_path)
+        load_dotenv()
 
         db_username = os.getenv('DB_USERNAME')
         db_password = os.getenv('DB_PASSWORD')
@@ -92,191 +96,116 @@ class GeocatAPI():
 
         return connection
 
+    def __search_uuid(self, body: dict):
+
+        uuids = []
+
+        proxies = self.session.proxies
+        unauth_session = requests.Session()
+        unauth_session.proxies = proxies
+
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
+        size = 2000
+
+        published_only = False
+        if "query_string" in body["query"]["bool"]["must"][0]:
+            query_string = body["query"]["bool"]["must"][0]["query_string"]["query"]
+            if "(isPublishedToAll:\"true\")" in query_string:
+                published_only = True
+
+        body["size"] = size
+        body = json.dumps(body)
+
+        iterations = ["unauth"]
+        if not published_only and self.session.auth is not None:
+            iterations.append("auth")
+
+        for i in iterations:
+            while True:
+
+                if i == "unauth":
+                    response = unauth_session.post(url=self.env +
+                        "/geonetwork/srv/api/search/records/_search", headers=headers, data=body)
+                elif i == "auth":
+                    response = self.session.post(url=self.env +
+                        "/geonetwork/srv/api/search/records/_search", headers=headers, data=body)     
+
+                if response.status_code == 200:
+                    for hit in response.json()["hits"]["hits"]:
+                        uuids.append(hit["_source"]["uuid"])
+
+                    if len(response.json()["hits"]["hits"]) < size:
+                        break
+
+                    body = json.loads(body)
+                    body["search_after"] = response.json()["hits"]["hits"][-1]["sort"]
+                    body = json.dumps(body)
+
+                else:
+                    break
+
+            body = json.loads(body)
+            if "search_after" in body:
+                del body["search_after"]
+
+            if "query_string" in locals():
+                query_string = query_string + "AND (isPublishedToAll:\"false\")"
+                body["query"]["bool"]["must"][0] = {"query_string": {"query": query_string,
+                    "default_operator": "AND"}}
+            else:
+                body["query"]["bool"]["must"].insert(0, {"query_string":
+                {"query": "(isPublishedToAll:\"false\")", "default_operator": "AND"}})
+
+            body = json.dumps(body)
+
+        return uuids
+
     def check_admin(self) -> bool:
         """
-        Check if the user is a geocat admin. If not, abort the program
+        Check if the user is a geocat admin. Returns True or False
         """
         headers = {"accept": "application/json", "Content-Type": "application/json"}
-        response = self.session.get(url=self.env + '/geonetwork/srv/api/0.1/me', headers=headers)
-        if json.loads(response.text)["profile"] == "Administrator":
-            return True
+        response = self.session.get(url=self.env + '/geonetwork/srv/api/me', headers=headers)
 
+        if response.status_code == 200:
+            if json.loads(response.text)["profile"] == "Administrator":
+                return True
         return False
 
-    def get_uuids_all(self, valid_only: bool = False, published_only: bool = False,
-                      with_templates: bool = False) -> list:
+    def get_uuids(self, with_harvested: bool = True, valid_only: bool = False, published_only:
+                    bool = False, with_templates: bool = False, group_id: str = None) -> list:
         """
-        Get a list of metadata uuid of all records.
-        You can specify if you want only the valid and/or published records and the templates.
-        """
-
-        headers = {"accept": "application/xml", "Content-Type": "application/xml"}
-
-        uuids = []
-        start = 1
-
-        while True:
-
-            facetq = str()
-
-            if valid_only:
-                facetq += "&isValid/1"
-            if published_only:
-                facetq += "&isPublishedToAll/y"
-
-            parameters = {
-                "from": start,
-            }
-
-            if len(facetq) > 0:
-                parameters["facet.q"] = facetq[1:]
-
-            if with_templates:
-                parameters["_isTemplate"] = "y or n"
-
-            response = self.session.get(url=self.env + "/geonetwork/srv/fre/q", headers=headers, params=parameters)
-
-            xmlroot = ET.fromstring(response.content)
-            metadatas = xmlroot.findall("metadata")
-
-            if len(metadatas) == 0:
-                break
-
-            for metadata in metadatas:
-                if metadata.find("*/uuid").text not in uuids:
-                    uuids.append(metadata.find("*/uuid").text)
-
-            start += 1499
-
-        return uuids
-
-    def get_uuids_by_group(self, group_id: str, valid_only: bool = False,
-                    published_only: bool = False, with_templates: bool = False) -> list:
-        """
-        Get a list of metadata uuid belonging to a given group.
-        You can specify if you want only the valid and/or published records and the templates.
+        Get a list of metadata uuid.
+        You can specify if you want or not : harvested, valid, published records and templates.
         """
 
-        headers = {"accept": "application/xml", "Content-Type": "application/xml"}
+        body = copy.deepcopy(settings.SEARCH_UUID_API_BODY)
 
-        uuids = []
-        start = 1
+        if with_templates:
+            body["query"]["bool"]["must"].append({"terms": {"isTemplate": ["y", "n"]}})
+        else:
+            body["query"]["bool"]["must"].append({"terms": {"isTemplate": ["n"]}})
 
-        while True:
+        query_string = str()
 
-            facetq = str()
+        if not with_harvested:
+            query_string = query_string + "(isHarvested:\"false\") AND"
 
-            if valid_only:
-                facetq += "&isValid/1"
-            if published_only:
-                facetq += "&isPublishedToAll/y"
+        if valid_only:
+            query_string = query_string + "(valid:\"1\") AND"
 
-            parameters = {
-                "_groupOwner": group_id,
-                "from": start,
-            }
+        if published_only:
+            query_string = query_string + "(isPublishedToAll:\"true\") AND"
 
-            if len(facetq) > 0:
-                parameters["facet.q"] = facetq[1:]
+        if group_id is not None:
+            query_string = query_string + f"(groupOwner:\"{group_id}\") AND"
 
-            if with_templates:
-                parameters["_isTemplate"] = "y or n"
+        if len(query_string) > 0:
+            query_string = query_string[:-4]
+            body["query"]["bool"]["must"].insert(0, {"query_string": {"query": query_string,
+                    "default_operator": "AND"}})
 
-            response = self.session.get(url=self.env + "/geonetwork/srv/fre/q", headers=headers, params=parameters)
-
-            xmlroot = ET.fromstring(response.content)
-            metadatas = xmlroot.findall("metadata")
-
-            if len(metadatas) == 0:
-                break
-
-            for metadata in metadatas:
-                if metadata.find("*/uuid").text not in uuids:
-                    uuids.append(metadata.find("*/uuid").text)
-
-            start += 1499
-
-        return uuids
-
-    def get_uuids_harvested(self) -> list:
-        """
-        Get a list of metadata uuid of all harvested records (no templates).
-        """
-
-        headers = {"accept": "application/xml", "Content-Type": "application/xml"}
-
-        uuid = []
-        start = 1
-
-        while True:
-            parameters = {
-                "facet.q": "isHarvested/y",
-                "from": start,
-            }
-
-            response = self.session.get(url=self.env + "/geonetwork/srv/fre/q", headers=headers, params=parameters)
-
-            xmlroot = ET.fromstring(response.content)
-            metadatas = xmlroot.findall("metadata")
-
-            if len(metadatas) == 0:
-                break
-
-            for metadata in metadatas:
-                if metadata.find("*/uuid").text not in uuid:
-                    uuid.append(metadata.find("*/uuid").text)
-
-            start += 1499
-
-        return uuid
-
-    def get_uuids_notharvested(self, valid_only: bool = False, published_only: bool = False,
-                      with_templates: bool = False) -> list:
-        """
-        Get a list of metadata uuid of all non harvested records.
-        You can specify if you want only the valid and/or published records and the templates.
-        """
-
-        headers = {"accept": "application/xml", "Content-Type": "application/xml"}
-
-        uuids = []
-        start = 1
-
-        while True:
-
-            facetq = str()
-
-            if valid_only:
-                facetq += "&isValid/1"
-            if published_only:
-                facetq += "&isPublishedToAll/y"
-
-            parameters = {
-                "facet.q": "isHarvested/n",
-                "from": start,
-            }
-
-            if len(facetq) > 0:
-                parameters["facet.q"] = facetq[1:]
-
-            if with_templates:
-                parameters["_isTemplate"] = "y or n"
-
-            response = self.session.get(url=self.env + "/geonetwork/srv/fre/q", headers=headers, params=parameters)
-
-            xmlroot = ET.fromstring(response.content)
-            metadatas = xmlroot.findall("metadata")
-
-            if len(metadatas) == 0:
-                break
-
-            for metadata in metadatas:
-                if metadata.find("*/uuid").text not in uuids:
-                    uuids.append(metadata.find("*/uuid").text)
-
-            start += 1499
-
-        return uuids
+        return self.__search_uuid(body=body)
 
     def get_ro_uuids(self, valid_only: bool = False, published_only: bool = False) -> dict:
         """
