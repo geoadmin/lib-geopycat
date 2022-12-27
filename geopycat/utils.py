@@ -56,9 +56,9 @@ def process_ok(response):
     Process the response of the geocat API requests.
 
     Works for following requests :
-     - /{portal}/api/0.1/records/batchediting
-     - /{portal}/api/0.1/records/validate
-     - /{portal}/api/0.1/records/{metadataUuid}/ownership
+     - /{portal}/api/records/batchediting
+     - /{portal}/api/records/validate
+     - /{portal}/api/records/{metadataUuid}/ownership
 
     Args:
         response:
