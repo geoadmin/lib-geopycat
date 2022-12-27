@@ -6,11 +6,11 @@ import json
 from datetime import datetime
 from zipfile import ZipFile
 import io
+import copy
 import requests
 import urllib3
 from dotenv import load_dotenv
 import psycopg2
-import copy
 from geopycat import settings
 from geopycat import utils
 
@@ -29,7 +29,8 @@ class GeocatAPI():
             print(utils.warningred(f"No environment : {env}"))
             sys.exit()
         if env == 'prod':
-            print(utils.warningred("WARNING : you choose the Production environment ! Be careful, all changes will be live on geocat.ch"))
+            print(utils.warningred("WARNING : you choose the Production environment ! \
+                Be careful, all changes will be live on geocat.ch"))
         self.env = settings.ENV[env]
         self.__username = input("Geocat Username or press enter to continue without login: ")
         if self.__username != "":
@@ -96,8 +97,11 @@ class GeocatAPI():
 
         return connection
 
-    def __search_uuid(self, body: dict):
-
+    def __search_uuid(self, body: dict) -> list:
+        """
+        Performs deep paginated search using ES search API request.
+        Args: body, the request's body
+        """
         uuids = []
 
         proxies = self.session.proxies
@@ -128,7 +132,7 @@ class GeocatAPI():
                         "/geonetwork/srv/api/search/records/_search", headers=headers, data=body)
                 elif i == "auth":
                     response = self.session.post(url=self.env +
-                        "/geonetwork/srv/api/search/records/_search", headers=headers, data=body)     
+                        "/geonetwork/srv/api/search/records/_search", headers=headers, data=body)
 
                 if response.status_code == 200:
                     for hit in response.json()["hits"]["hits"]:
@@ -173,7 +177,8 @@ class GeocatAPI():
         return False
 
     def get_uuids(self, with_harvested: bool = True, valid_only: bool = False, published_only:
-                    bool = False, with_templates: bool = False, group_id: str = None) -> list:
+                    bool = False, with_templates: bool = False, group_id: str = None,
+                    keywords: list = None) -> list:
         """
         Get a list of metadata uuid.
         You can specify if you want or not : harvested, valid, published records and templates.
@@ -200,6 +205,13 @@ class GeocatAPI():
         if group_id is not None:
             query_string = query_string + f"(groupOwner:\"{group_id}\") AND"
 
+        if keywords is not None:
+            query_kw = " AND ".join([f"tag.default:\"{i}\" OR tag.langfre:\"{i}\"" \
+                "OR tag.langger:\"{i}\" OR tag.langita:\"{i}\" OR tag.langeng:\"{i}\""
+                for i in keywords])
+
+            query_string = query_string + f"({query_kw}) AND"
+
         if len(query_string) > 0:
             query_string = query_string[:-4]
             body["query"]["bool"]["must"].insert(0, {"query_string": {"query": query_string,
@@ -210,7 +222,8 @@ class GeocatAPI():
     def get_ro_uuids(self, valid_only: bool = False, published_only: bool = False) -> dict:
         """
         Get UUID of all reusable objects (subtemplates).
-        You can specify if you want only the valid and/or published records. The subtemplates template are not returned.
+        You can specify if you want only the valid and/or published records.
+        The subtemplates template are not returned.
         Returns a dictionnary with the 3 kinds of RO : {"contact": ,"extent": ,"format": }
         """
 
@@ -273,7 +286,7 @@ class GeocatAPI():
         proxy_error = True
         while proxy_error:
             try:
-                response = self.session.get(url=self.env + f"/geonetwork/srv/api/0.1/records/{uuid}/formatters/zip",
+                response = self.session.get(url=self.env + f"/geonetwork/srv/api/records/{uuid}/formatters/zip",
                                             headers=headers)
             except requests.exceptions.ProxyError:
                 print("Proxy Error Occured, retry connection")
@@ -290,33 +303,33 @@ class GeocatAPI():
             else:
                 print(f"{utils.warningred('The following Metadata could not be exported in MEF : ') + uuid}")
 
-    def get_metadata_languages(self, metadata: bytes) -> list:
+    def get_metadata_languages(self, metadata: bytes) -> dict:
         """
         Fetches all languages of the metadata (given as bytes string).
-        Returns a list of ISO codes (2 capital letters). The first language is the main one
-        of the metadata.
+        Returns main and additonal metadata languages in form of a dictionnary.
         """
 
-        languages = list()
+        languages = {
+            "mainLanguage": None,
+            "languages": list(),
+        }
 
         xml_root = ET.fromstring(metadata)
 
-        main_lang = xml_root.find("./gmd:language/gmd:LanguageCode", 
+        languages["mainLanguage"] = xml_root.find("./gmd:language/gmd:LanguageCode",
                         namespaces=settings.NS).attrib["codeListValue"]
 
-        languages.append(settings.LANG_ISO[main_lang])
-
         for lang in xml_root.findall("./gmd:locale//gmd:LanguageCode", namespaces=settings.NS):
-            if settings.LANG_ISO[lang.attrib["codeListValue"]] not in languages:
-                languages.append(settings.LANG_ISO[lang.attrib["codeListValue"]])
+                languages["languages"].append(lang.attrib["codeListValue"])
 
         return languages
 
-    def backup_metadata(self, uuids: list):
+    def backup_metadata(self, uuids: list, backup_dir: str = None):
         """
         Backup list of metadata as MEF zip file.
         """
-        backup_dir = f"MetadataBackup_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        if backup_dir is None:
+            backup_dir = f"MetadataBackup_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
         if not os.path.isdir(backup_dir):
             os.mkdir(backup_dir)
@@ -331,7 +344,7 @@ class GeocatAPI():
             proxy_error = True
             while proxy_error:
                 try:
-                    response = self.session.get(url=self.env + f"/geonetwork/srv/api/0.1/records/{uuid}/formatters/zip",
+                    response = self.session.get(url=self.env + f"/geonetwork/srv/api/records/{uuid}/formatters/zip",
                                                 headers=headers)
                 except requests.exceptions.ProxyError:
                     print("Proxy Error Occured, retry connection")
@@ -351,15 +364,15 @@ class GeocatAPI():
 
         print(f"Backup metadata : {utils.okgreen('Done')}")
 
-    def edit_metadata(self, uuid: str, body: list, updateDateStamp: str ='false') -> object:
+    def edit_metadata(self, uuid: str, body: list, updateDateStamp: str ='true') -> object:
         """
         Edit a metadata by giving sets of xpath and xml.
 
         Args:
             uuid : the uuid of the metadata to edit.
             body : the edits you want to perform : [{"xpath": xpath, "value": xml}, ...]
-            updateDateStamp : 'true' or 'false', default = 'false'. If 'true',
-            the update date and time of the metadata is updated
+            updateDateStamp : 'true' or 'false', default = 'true'. If 'false',
+            the update date and time of the metadata is not updated.
 
         Returns:
             The response of the batchediting request
@@ -372,7 +385,7 @@ class GeocatAPI():
 
         body = json.dumps(body)
 
-        response = self.session.put(self.env + "/geonetwork/srv/api/0.1/records/batchediting",
+        response = self.session.put(self.env + "/geonetwork/srv/api/records/batchediting",
                                     params=params, headers=headers, data=body)
 
         return response
