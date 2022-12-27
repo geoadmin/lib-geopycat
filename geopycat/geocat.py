@@ -29,8 +29,8 @@ class GeocatAPI():
             print(utils.warningred(f"No environment : {env}"))
             sys.exit()
         if env == 'prod':
-            print(utils.warningred("WARNING : you choose the Production environment ! \
-                Be careful, all changes will be live on geocat.ch"))
+            print(utils.warningred("WARNING : you choose the Production environment ! " \
+                "Be careful, all changes will be live on geocat.ch"))
         self.env = settings.ENV[env]
         self.__username = input("Geocat Username or press enter to continue without login: ")
         if self.__username != "":
