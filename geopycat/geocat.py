@@ -74,7 +74,7 @@ class GeocatAPI():
 
         return session
 
-    def __db_connect(self) -> object:
+    def db_connect(self) -> object:
         """Connect to geocat DB and returns a psycopg2 connection object"""
 
         # Access database credentials from .env variable if exist
@@ -219,7 +219,8 @@ class GeocatAPI():
 
         return self.__search_uuid(body=body)
 
-    def get_ro_uuids(self, valid_only: bool = False, published_only: bool = False) -> dict:
+    def get_ro_uuids(self, valid_only: bool = False, published_only: bool = False, 
+                        with_template: bool = False) -> dict:
         """
         Get UUID of all reusable objects (subtemplates).
         You can specify if you want only the valid and/or published records.
@@ -235,24 +236,29 @@ class GeocatAPI():
         uuids_extent = list()
         uuids_format = list()
 
+        if with_template:
+            template = " or istemplate = 't'"
+        else:
+            template = str()
+
         try:
-            connection = self.__db_connect()
+            connection = self.db_connect()
 
             with connection.cursor() as cursor:
 
                 if valid_only and not published_only:
-                    cursor.execute("SELECT UUID,data FROM public.metadata WHERE istemplate='s'" \
+                    cursor.execute(f"SELECT UUID,data FROM public.metadata WHERE (istemplate='s' {template}) " \
                     "AND id IN (SELECT metadataid FROM public.validation WHERE status=1 AND required=true)")
 
                 elif published_only and not valid_only:
-                    cursor.execute("SELECT UUID,data FROM public.metadata WHERE istemplate='s'" \
+                    cursor.execute(f"SELECT UUID,data FROM public.metadata WHERE (istemplate='s' {template}) " \
                     "AND id IN (SELECT metadataid FROM public.operationallowed WHERE groupid=1 AND operationid=0)")
                 elif valid_only and published_only:
-                    cursor.execute("SELECT UUID,data FROM public.metadata WHERE istemplate='s'" \
-                    "AND id IN (SELECT metadataid FROM public.validation WHERE status=1 AND required=true)" \
+                    cursor.execute(f"SELECT UUID,data FROM public.metadata WHERE (istemplate='s' {template}) " \
+                    "AND id IN (SELECT metadataid FROM public.validation WHERE status=1 AND required=true) " \
                     "AND id IN (SELECT metadataid FROM public.operationallowed WHERE groupid=1 AND operationid=0)")
                 else:
-                    cursor.execute("SELECT UUID,data FROM public.metadata WHERE istemplate='s'")
+                    cursor.execute(f"SELECT UUID,data FROM public.metadata WHERE (istemplate='s' {template})")
 
                 for row in cursor:
                     if row[1].startswith("<che:CHE_CI_ResponsibleParty"):
@@ -324,7 +330,7 @@ class GeocatAPI():
 
         return languages
 
-    def backup_metadata(self, uuids: list, backup_dir: str = None):
+    def backup_metadata(self, uuids: list, backup_dir: str = None, with_related: bool = True):
         """
         Backup list of metadata as MEF zip file.
         """
@@ -338,6 +344,10 @@ class GeocatAPI():
 
         print("Backup metadata : ", end="\r")
 
+        params = {
+            "withRelated": with_related
+        }
+
         count = 1
         for uuid in uuids:
 
@@ -345,7 +355,7 @@ class GeocatAPI():
             while proxy_error:
                 try:
                     response = self.session.get(url=self.env + f"/geonetwork/srv/api/records/{uuid}/formatters/zip",
-                                                headers=headers)
+                                                headers=headers, params=params)
                 except requests.exceptions.ProxyError:
                     print("Proxy Error Occured, retry connection")
                 else:

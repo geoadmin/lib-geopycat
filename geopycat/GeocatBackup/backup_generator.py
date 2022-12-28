@@ -1,5 +1,6 @@
 import os
 import json
+import psycopg2
 import pandas as pd
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -13,8 +14,7 @@ class GeocatBackup(geocat):
     """
 
     def __init__(self, backup_dir: str = None, catalogue: bool = True, users: bool = True,
-                 groups: bool = True, subtemplates: bool = True, thesaurus: bool = True,
-                 **kwargs):
+                 groups: bool = True, subtemplates: bool = True, **kwargs):
 
         super().__init__(**kwargs)
 
@@ -26,6 +26,8 @@ class GeocatBackup(geocat):
 
         if backup_dir is None:
             self.backup_dir = f"GeocatBackup_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        else:
+            self.backup_dir = backup_dir
 
         if not os.path.isdir(self.backup_dir):
             os.mkdir(self.backup_dir)
@@ -38,11 +40,11 @@ class GeocatBackup(geocat):
             self.__backup_groups()
         if subtemplates:
             self.__backup_subtemplates()
-        # if thesaurus:
-        #     self.backup_thesaurus()
-
-        # self.write_logfile()
-        # self.backup_unpublish_report()
+        
+        self.__backup_thesaurus()
+        self.__backup_unpublish_report()
+        self.__backup_harvesting_settings()
+        self.__write_logfile()
 
         print(utils.okgreen("Backup Done"))
 
@@ -52,7 +54,8 @@ class GeocatBackup(geocat):
             os.mkdir(os.path.join(self.backup_dir, "metadata"))
 
         uuids = self.get_uuids(with_harvested=False, with_templates=True)
-        self.backup_metadata(uuids=uuids, backup_dir=os.path.join(self.backup_dir, "metadata"))
+        self.backup_metadata(uuids=uuids, backup_dir=os.path.join(self.backup_dir, "metadata"), 
+                                with_related=False)
 
     def __backup_users(self):
         """
@@ -227,15 +230,13 @@ class GeocatBackup(geocat):
         if not os.path.exists(output_dir_formats):
             os.mkdir(output_dir_formats)
 
-        subtpl_uuids = self.get_ro_uuids()
+        subtpl_uuids = self.get_ro_uuids(with_template=True)
 
         def export_subtemplate(uuid):
             headers = {"accept": "application/xml", "Content-Type": "application/xml"}
-            parameters = {"lang": "ger,fre,ita,eng,roh"}
 
             response = self.session.get(
-            url=self.env + f"/geonetwork/srv/api/registries/entries/{uuid}", 
-            headers=headers, params=parameters)
+            url=self.env + f"/geonetwork/srv/api/records/{uuid}/formatters/xml", headers=headers)
 
             if response.status_code != 200:
                 print(f"{utils.warningred('The following contact could not be backup : ') + uuid}")
@@ -295,3 +296,114 @@ class GeocatBackup(geocat):
         print(f"Backup formats : {utils.okgreen('Done')}")
 
         print(f"Backup subtemplates : {utils.okgreen('Done')}")
+
+    def __backup_thesaurus(self):
+        """
+        Backup custom thesaurus in rdf format (xml) : geocat.ch
+        """
+        print("Backup thesaurus...", end="\r")
+        thesaurus_ref = ["local.theme.geocat.ch"]
+
+        headers = {"accept": "text/xml", "Content-Type": "text/xml"}
+
+        for thesaurus_name in thesaurus_ref:
+            response = self.session.get(
+                url=self.env + f"/geonetwork/srv/api/registries/vocabularies/{thesaurus_name}",
+                headers=headers)
+
+            with open(os.path.join(self.backup_dir, f"{thesaurus_name}.rdf"), 'wb') as file:
+                file.write(response.content)
+
+        print(f"Backup thesaurus {utils.okgreen('Done')}")
+
+    def __backup_unpublish_report(self):
+        """
+        Backup the de-publication report in csv
+        """
+        response = self.session.get(url=self.env + "/geonetwork/srv/fre/unpublish.report.csv")
+
+        with open(os.path.join(self.backup_dir, "unpublish_report.csv"), 'wb') as file:
+            file.write(response.content)
+
+    def __write_logfile(self):
+        """
+        Write a logfile. Runs everytime the class is initiated
+        """
+        if os.path.isfile(os.path.join(self.backup_dir, "backup.log")):
+            os.remove(os.path.join(self.backup_dir, "backup.log"))
+
+        # Number of metadata
+        md_folder = os.path.join(self.backup_dir, "metadata")
+        if os.path.exists(md_folder):
+            md_total = len([i for i in os.listdir(md_folder) if 
+                                os.path.isfile(os.path.join(md_folder, i))])
+
+            with open(os.path.join(self.backup_dir, "backup.log"), "w") as logfile:
+                logfile.write(f"Metadatas backup : {md_total}\n")
+
+        # Number of users
+        if os.path.isfile(self.backup_dir + "/users/users.json"):
+            with open(self.backup_dir + "/users/users.json") as users:
+                with open(os.path.join(self.backup_dir, "backup.log"), "a") as logfile:
+                    logfile.write(f"Users backup : {len(json.load(users))}\n")
+
+        # Number of groups
+        if os.path.isfile(self.backup_dir + "/groups/groups.json"):
+            with open(self.backup_dir + "/groups/groups.json") as groups:
+                with open(os.path.join(self.backup_dir, "backup.log"), "a") as logfile:
+                    logfile.write(f"Groups backup : {len(json.load(groups))}\n")
+
+        # Number of ro contacts
+        if os.path.isdir(self.backup_dir + "/Subtemplates_contacts"):
+            with open(os.path.join(self.backup_dir, "backup.log"), "a") as logfile:
+                logfile.write(
+                    f"Contacts (reusable objects) backup : {len(os.listdir(self.backup_dir + '/Subtemplates_contacts'))}\n")
+
+        # Number of ro extents
+        if os.path.isdir(self.backup_dir + "/Subtemplates_extents"):
+            with open(os.path.join(self.backup_dir, "backup.log"), "a") as logfile:
+                logfile.write(
+                    f"Extents (reusable objects) backup : {len(os.listdir(self.backup_dir + '/Subtemplates_extents'))}\n")
+
+        # Number of ro formats
+        if os.path.isdir(self.backup_dir + "/Subtemplates_formats"):
+            with open(os.path.join(self.backup_dir, "backup.log"), "a") as logfile:
+                logfile.write(
+                    f"Formats (reusable objects) backup : {len(os.listdir(self.backup_dir + '/Subtemplates_formats'))}\n")
+
+    def __backup_harvesting_settings(self):
+        """
+        Backup harvesting setting from DB into a json file.
+        """
+
+        print("Backup harvesting settings...", end="\r")
+        harvesting = dict()
+
+        try:
+            connection = self.db_connect()
+
+            with connection.cursor() as cursor:
+
+                cursor.execute("SELECT name,value FROM public.harvestersettings " \
+                                "WHERE value != '' ORDER BY id ASC")
+
+                for row in cursor:
+                    if row[0] == "name":
+                        name = row[1]
+                        harvesting[name] = {}
+                    else:
+                        if "name" in locals():
+                            harvesting[name][row[0]] = row[1]
+
+        except (Exception, psycopg2.Error) as error:
+            print("Error while fetching data from PostgreSQL", error)
+
+        else:
+            with open(os.path.join(self.backup_dir, "harvesting_settings.json"), "w") as file:
+                json.dump(harvesting, file, indent=4)
+
+        finally:
+            if connection:
+                connection.close()
+
+        print(f"Backup harvesting settings {utils.okgreen('Done')}")
