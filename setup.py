@@ -23,5 +23,6 @@ setuptools.setup(
         'python-dotenv >=0.20.0',
         'psycopg2 >= 2.9.3',
         'pandas >= 1.2.3',
-      ]
+    ],
+    scripts=['bin/geocat_bckp']
 )
