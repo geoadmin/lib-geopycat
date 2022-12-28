@@ -9,10 +9,14 @@ import io
 import copy
 import requests
 import urllib3
+import colorama
 from dotenv import load_dotenv
 import psycopg2
 from geopycat import settings
 from geopycat import utils
+
+colorama.init()
+
 
 class GeocatAPI():
     """

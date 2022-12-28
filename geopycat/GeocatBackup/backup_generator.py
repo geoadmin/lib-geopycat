@@ -1,11 +1,14 @@
 import os
 import json
 import psycopg2
+import colorama
 import pandas as pd
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from geopycat import geocat
 from geopycat import utils
+
+colorama.init()
 
 
 class GeocatBackup(geocat):

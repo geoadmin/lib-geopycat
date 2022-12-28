@@ -23,6 +23,7 @@ setuptools.setup(
         'python-dotenv >=0.20.0',
         'psycopg2 >= 2.9.3',
         'pandas >= 1.2.3',
+        'colorama >= 0.4.5',
     ],
-    scripts=['bin/geocat_bckp']
+    scripts=['bin/geocat_backup.py']
 )
