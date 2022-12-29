@@ -1,9 +1,6 @@
 import json
 import logging
-import colorama
 from geopycat import settings
-
-colorama.init()
 
 
 def xpath_ns_url2code(path: str) -> str:

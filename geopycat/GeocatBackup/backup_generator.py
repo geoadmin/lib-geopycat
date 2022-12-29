@@ -1,14 +1,11 @@
 import os
 import json
 import psycopg2
-import colorama
 import pandas as pd
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from geopycat import geocat
 from geopycat import utils
-
-colorama.init()
 
 
 class GeocatBackup(geocat):
@@ -337,12 +334,8 @@ class GeocatBackup(geocat):
 
         # Number of metadata
         md_folder = os.path.join(self.backup_dir, "metadata")
-        if os.path.exists(md_folder):
-            md_total = len([i for i in os.listdir(md_folder) if 
-                                os.path.isfile(os.path.join(md_folder, i))])
-
-            with open(os.path.join(self.backup_dir, "backup.log"), "w") as logfile:
-                logfile.write(f"Metadatas backup : {md_total}\n")
+        with open(os.path.join(self.backup_dir, "backup.log"), "w") as logfile:
+            logfile.write(f"Metadatas backup : {len(os.listdir(md_folder))}\n")
 
         # Number of users
         if os.path.isfile(self.backup_dir + "/users/users.json"):

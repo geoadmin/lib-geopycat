@@ -1,6 +1,9 @@
 import argparse
 import os
+import colorama
 from geopycat.GeocatBackup import GeocatBackup
+
+colorama.init()
 
 parser = argparse.ArgumentParser()
 
