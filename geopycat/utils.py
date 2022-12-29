@@ -2,6 +2,7 @@ import json
 import logging
 from geopycat import settings
 
+
 def xpath_ns_url2code(path: str) -> str:
     """Replace the namespace url by the namespace acronym in the given xpath"""
     for key in settings.NS:
