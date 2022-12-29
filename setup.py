@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="geopycat",
-    version="0.1.3",
+    version="0.1.4",
     author="Benoit G. Regamey",
     author_email="benoit.regamey@swisstopo.ch",
     description="Manage metadata and data of geocat.ch - a geonetwork instance for Switzerland",
@@ -25,5 +25,8 @@ setuptools.setup(
         'pandas >= 1.2.3',
         'colorama >= 0.4.5',
     ],
-    scripts=['bin/geocat_backup.py']
+    scripts=[
+        'bin/geocat_backup.py',
+        'bin/geocat_backup',
+    ]
 )
