@@ -21,6 +21,9 @@ theme:
 
   logo: img/geopycat-icon.png
 
+  features:
+    - content.code.copy
+
 nav:
   - index.md
   - Installation.md
