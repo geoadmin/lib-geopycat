@@ -21,6 +21,12 @@ theme:
 
   logo: img/geopycat-icon.png
 
+nav:
+  - index.md
+  - Installation.md
+  - geocat.md
+  - Backup_geocat.md
+
 markdown_extensions:
   - attr_list
   - md_in_html
