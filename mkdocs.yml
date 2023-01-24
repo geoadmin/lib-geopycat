@@ -29,8 +29,13 @@ nav:
   - Installation.md
   - geocat.md
   - Tools:
+<<<<<<< HEAD
     - tools/Backup_geocat.md
     - tools/Delete_unused_subtemplates.md
+=======
+    - Backup_geocat.md
+    - Delete_unused_subtemplates.md
+>>>>>>> 392498a (fix doc bug)
 
 markdown_extensions:
   - attr_list
