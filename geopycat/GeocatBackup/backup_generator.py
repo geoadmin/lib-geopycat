@@ -239,13 +239,13 @@ class GeocatBackup(geocat):
             url=self.env + f"/geonetwork/srv/api/records/{uuid}/formatters/xml", headers=headers)
 
             if response.status_code != 200:
-                print(f"{utils.warningred('The following contact could not be backup : ') + uuid}")
+                print(f"{utils.warningred('The following subtemplate could not be backup : ') + uuid}")
                 return
 
             xmlroot = ET.fromstring(response.text)
 
             if xmlroot.tag == "apiError":
-                print(f"{utils.warningred('The following contact could not be backup : ') + uuid}")
+                print(f"{utils.warningred('The following subtemplate could not be backup : ') + uuid}")
                 return
 
             return response.content

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="geopycat",
-    version="0.1.4",
+    version="0.1.5",
     author="Benoit G. Regamey",
     author_email="benoit.regamey@swisstopo.ch",
     description="Manage metadata and data of geocat.ch - a geonetwork instance for Switzerland",
@@ -24,9 +24,12 @@ setuptools.setup(
         'psycopg2 >= 2.9.3',
         'pandas >= 1.2.3',
         'colorama >= 0.4.5',
+        'python-dateutil >= 2.8.1',
     ],
     scripts=[
         'bin/geocat_backup.py',
         'bin/geocat_backup',
+        'bin/delete_unused_subtpl.py',
+        'bin/delete_unused_subtpl'
     ]
 )

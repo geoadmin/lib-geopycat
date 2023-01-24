@@ -28,7 +28,8 @@ nav:
   - index.md
   - Installation.md
   - geocat.md
-  - Backup_geocat.md
+  - Tools:
+    - Backup_geocat.md
 
 markdown_extensions:
   - attr_list
