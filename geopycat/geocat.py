@@ -220,7 +220,7 @@ class GeocatAPI():
 
         return self.__search_uuid(body=body)
 
-    def get_ro_uuids(self, valid_only: bool = False, published_only: bool = False, 
+    def get_ro_uuids(self, valid_only: bool = False, published_only: bool = False,
                         with_template: bool = False) -> dict:
         """
         Get UUID of all reusable objects (subtemplates).
@@ -375,6 +375,50 @@ class GeocatAPI():
 
         print(f"Backup metadata : {utils.okgreen('Done')}")
 
+    def backup_metadata_xml(self, uuids: list, backup_dir: str = None):
+        """
+        Backup list of metadata as XML file.
+        """
+        if backup_dir is None:
+            backup_dir = f"MetadataBackup_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+        if not os.path.isdir(backup_dir):
+            os.mkdir(backup_dir)
+
+        headers = {"accept": "application/xml", "Content-Type": "application/xml"}
+
+        print("Backup metadata : ", end="\r")
+
+        params = {
+            "increasePopularity": False,
+        }
+
+        count = 1
+        for uuid in uuids:
+
+            proxy_error = True
+            while proxy_error:
+                try:
+                    response = self.session.get(url=self.env + f"/geonetwork/srv/api/records/{uuid}/formatters/xml",
+                                                headers=headers, params=params)
+                except requests.exceptions.ProxyError:
+                    print("Proxy Error Occured, retry connection")
+                else:
+                    proxy_error = False
+
+            if response.status_code != 200:
+                print(f"{utils.warningred('The following Metadata could not be backup : ') + uuid}")
+                continue
+
+            with open(os.path.join(backup_dir, f"{uuid}.xml"), "wb") as output:
+                output.write(response.content)
+
+            print(f"Backup metadata : {round((count / len(uuids)) * 100, 1)}%", end="\r")
+
+            count += 1
+
+        print(f"Backup metadata : {utils.okgreen('Done')}")    
+
     def edit_metadata(self, uuid: str, body: list, updateDateStamp: str ='true') -> object:
         """
         Edit a metadata by giving sets of xpath and xml.
@@ -398,5 +442,20 @@ class GeocatAPI():
 
         response = self.session.put(self.env + "/geonetwork/srv/api/records/batchediting",
                                     params=params, headers=headers, data=body)
+
+        return response
+
+    def delete_metadata(self, uuid: str):
+        """
+        Delete metadata by giving its uuid. Returns the response of delete request
+        """
+
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
+        params = {
+            "withBackup": False
+        }
+
+        response = self.session.delete(self.env + f"/geonetwork/srv/api/records/{uuid}",
+                            params=params, headers=headers)
 
         return response
