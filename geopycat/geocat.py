@@ -208,7 +208,7 @@ class GeocatAPI():
 
         if keywords is not None:
             query_kw = " AND ".join([f"tag.default:\"{i}\" OR tag.langfre:\"{i}\"" \
-                "OR tag.langger:\"{i}\" OR tag.langita:\"{i}\" OR tag.langeng:\"{i}\""
+                f"OR tag.langger:\"{i}\" OR tag.langita:\"{i}\" OR tag.langeng:\"{i}\""
                 for i in keywords])
 
             query_string = query_string + f"({query_kw}) AND"
