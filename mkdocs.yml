@@ -26,7 +26,6 @@ theme:
 
 nav:
   - index.md
-  - Installation.md
   - geocat.md
   - Tools:
     - Backup_geocat.md

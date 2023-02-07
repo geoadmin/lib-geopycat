@@ -2,7 +2,7 @@ geopycat provides a CLI script to generate backups of geocat.ch. In order to suc
 run this script, you should have admin rights and be able to connect to the PostgreSQL database of geocat.ch.
 
 ## Database connection
-You can specify the username and password for connecting to the database in environment variables.
+You can specify the username and password for connecting to the database in environment variables or in CLI parameters (see below).
 If not, the script will prompt for credentials.
 
 In a `.env` file
@@ -13,17 +13,17 @@ DB_PASSWORD=password
 
 ## Running on UNIX system
 ```bash
-geocat_backup [-env] [-o] [-m] [-u] [-g] [-s] [-db-user] [-db-password]
+geocat_backup [-env [env]] [-o] [-m] [-u] [-g] [-s] [-db-user [db username]] [-db-password [db password]]
 ```
 ```
--env: int or prod
+env: int or prod
 -o: output folder
 -m: do not bakcup metadata
 -u: do not bakcup users
 -g: do not bakcup groups
 -s: do not bakcup subtemplates
--db-user: database username
--db-password: database password
+db username: database username
+db password: database password
 ```
 ## Running on windows
 ```bash

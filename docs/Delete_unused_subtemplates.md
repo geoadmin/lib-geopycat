@@ -2,7 +2,7 @@ geopycat provides a CLI script to delete subtemplates that are not referenced in
 run this script, you should have admin rights and be able to connect to the PostgreSQL database of geocat.ch.
 
 ## Database connection
-You can specify the username and password for connecting to the database in environment variables.
+You can specify the username and password for connecting to the database in environment variables or in CLI parameters (see below).
 If not, the script will prompt for credentials.
 
 In a `.env` file
@@ -19,6 +19,8 @@ delete_unused_subtpl [-env [env]]  [-older-than [older-than]] [--no-backup] [-db
 * `env` int or prod
 * `older-than` integer (number of months), delete subtemplates that have not been updated since x months
 * `--no-backup` do not backup subtemplates before deletion
+* `db username`: database username
+* `db password`: database password
 
 ## Running on windows
 ```bash
