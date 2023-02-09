@@ -178,8 +178,8 @@ class GeocatAPI():
         return False
 
     def get_uuids(self, with_harvested: bool = True, valid_only: bool = False, published_only:
-                    bool = False, with_templates: bool = False, group_id: str = None,
-                    keywords: list = None) -> list:
+                    bool = False, with_templates: bool = False, in_groups: list = None,
+                    not_in_groups: list = None, keywords: list = None) -> list:
         """
         Get a list of metadata uuid.
         You can specify if you want or not : harvested, valid, published records and templates.
@@ -203,8 +203,13 @@ class GeocatAPI():
         if published_only:
             query_string = query_string + "(isPublishedToAll:\"true\") AND"
 
-        if group_id is not None:
-            query_string = query_string + f"(groupOwner:\"{group_id}\") AND"
+        if in_groups is not None:
+            toadd = " OR ".join([f"groupOwner:\"{i}\"" for i in in_groups])
+            query_string = query_string + f"({toadd}) AND"
+
+        if not_in_groups is not None:
+            toadd = " OR ".join([f"-groupOwner:\"{i}\"" for i in not_in_groups])
+            query_string = query_string + f"({toadd}) AND"
 
         if keywords is not None:
             query_kw = " AND ".join([f"tag.default:\"{i}\" OR tag.langfre:\"{i}\"" \
