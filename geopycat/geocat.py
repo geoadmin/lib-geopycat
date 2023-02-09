@@ -331,6 +331,28 @@ class GeocatAPI():
 
         return languages
 
+    def get_metadata_groupowner_id(self, uuid: str) -> str:
+        """
+        Returns the metadata group owner ID
+        """
+
+        headers = {"accept": "application/json"}
+
+        proxy_error = True
+        while proxy_error:
+            try:
+                response = self.session.get(url=self.env + f"/geonetwork/srv/api/records/{uuid}/sharing",
+                                            headers=headers)
+            except requests.exceptions.ProxyError:
+                print("Proxy Error Occured, retry connection")
+            else:
+                proxy_error = False
+        
+        if response.status_code == 200:
+            return response.json()["groupOwner"]
+        else:
+            print(f"{utils.warningred('Could not retrieve group owner ID for md : ') + uuid}")
+
     def backup_metadata(self, uuids: list, backup_dir: str = None, with_related: bool = True):
         """
         Backup list of metadata as MEF zip file.
