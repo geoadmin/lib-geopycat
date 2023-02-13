@@ -179,7 +179,7 @@ class GeocatAPI():
 
     def get_uuids(self, with_harvested: bool = True, valid_only: bool = False, published_only:
                     bool = False, with_templates: bool = False, in_groups: list = None,
-                    not_in_groups: list = None, keywords: list = None) -> list:
+                    not_in_groups: list = None, keywords: list = None, q: str = None) -> list:
         """
         Get a list of metadata uuid.
         You can specify if you want or not : harvested, valid, published records and templates.
@@ -217,6 +217,9 @@ class GeocatAPI():
                 for i in keywords])
 
             query_string = query_string + f"({query_kw}) AND"
+
+        if q is not None:
+            query_string = query_string + f"({q}) AND"
 
         if len(query_string) > 0:
             query_string = query_string[:-4]
