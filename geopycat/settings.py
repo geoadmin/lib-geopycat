@@ -55,3 +55,29 @@ SEARCH_UUID_API_BODY = {
     "track_total_hits": True,
     "sort": {"_id": "asc"},
 }
+
+GET_MD_INDEX_API_BODY = {
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "multi_match": {
+                        "query": None,
+                        "fields": [
+                            "id",
+                            "uuid"
+                        ]
+                    }
+                },
+                {
+                    "terms": {
+                        "isTemplate": [
+                            "n",
+                            "y"
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+}

@@ -339,6 +339,27 @@ class GeocatAPI():
 
         return languages
 
+    def get_metadata_index(self, uuid: str) -> dict:
+        """
+        Fetches the elastic search index for a given metadata UUID
+        """
+
+        body = copy.deepcopy(settings.GET_MD_INDEX_API_BODY)
+        body["query"]["bool"]["must"][0]["multi_match"]["query"] = uuid
+
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
+
+        body = json.dumps(body)
+
+        response = self.session.post(url=self.env +
+                    "/geonetwork/srv/api/search/records/_search", headers=headers, data=body)
+
+        if response.status_code == 200:
+            index = response.json()
+            return index["hits"]["hits"][0]
+        else:
+            print(f"{utils.warningred('Could not retrieve index for md : ') + uuid}")
+
     def get_metadata_groupowner_id(self, uuid: str) -> str:
         """
         Returns the metadata group owner ID
