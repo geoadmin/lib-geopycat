@@ -318,30 +318,6 @@ class GeocatAPI():
             else:
                 print(f"{utils.warningred('The following Metadata could not be exported in MEF : ') + uuid}")
 
-    def get_metadata_languages(self, metadata: bytes) -> dict:
-        """
-        Fetches all languages of the metadata (given as bytes string).
-        Returns main and additonal metadata languages in form of a dictionnary.
-        """
-
-        languages = {
-            "language": None,
-            "locales": list(),
-        }
-
-        xml_root = ET.fromstring(metadata)
-
-        languages["language"] = xml_root.find("./gmd:language/gmd:LanguageCode",
-                        namespaces=settings.NS).attrib["codeListValue"]
-
-        for lang in xml_root.findall("./gmd:locale//gmd:LanguageCode", namespaces=settings.NS):
-                if lang.attrib["codeListValue"] != languages["language"] and \
-                    lang.attrib["codeListValue"] not in languages["locales"]:
-
-                    languages["locales"].append(lang.attrib["codeListValue"])
-
-        return languages
-
     def get_metadata_index(self, uuid: str) -> dict:
         """
         Fetches the elastic search index for a given metadata UUID
