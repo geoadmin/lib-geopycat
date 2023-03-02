@@ -212,7 +212,7 @@ class GeocatAPI():
             query_string = query_string + f"({toadd}) AND"
 
         if keywords is not None:
-            query_kw = " AND ".join([f"tag.default:\"{i}\" OR tag.langfre:\"{i}\"" \
+            query_kw = " OR ".join([f"tag.default:\"{i}\" OR tag.langfre:\"{i}\"" \
                 f"OR tag.langger:\"{i}\" OR tag.langita:\"{i}\" OR tag.langeng:\"{i}\""
                 for i in keywords])
 
@@ -325,17 +325,20 @@ class GeocatAPI():
         """
 
         languages = {
-            "mainLanguage": None,
-            "languages": list(),
+            "language": None,
+            "locales": list(),
         }
 
         xml_root = ET.fromstring(metadata)
 
-        languages["mainLanguage"] = xml_root.find("./gmd:language/gmd:LanguageCode",
+        languages["language"] = xml_root.find("./gmd:language/gmd:LanguageCode",
                         namespaces=settings.NS).attrib["codeListValue"]
 
         for lang in xml_root.findall("./gmd:locale//gmd:LanguageCode", namespaces=settings.NS):
-                languages["languages"].append(lang.attrib["codeListValue"])
+                if lang.attrib["codeListValue"] != languages["language"] and \
+                    lang.attrib["codeListValue"] not in languages["locales"]:
+
+                    languages["locales"].append(lang.attrib["codeListValue"])
 
         return languages
 
