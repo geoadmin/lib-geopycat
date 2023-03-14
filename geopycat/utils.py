@@ -104,3 +104,16 @@ def get_metadata_languages(metadata: bytes) -> dict:
                 languages["locales"].append(lang.attrib["codeListValue"])
 
     return languages
+
+
+def xmlify(string: str) -> str:
+    """Replace XML special characters"""
+
+    string = string.replace("&", "&amp;")
+    string = string.replace(">", "&gt;")
+    string = string.replace("<", "&lt;")
+    string = string.replace("'", "&apos;")
+    string = string.replace('"', "&quot;")
+
+    return string
+    
