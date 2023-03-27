@@ -30,6 +30,7 @@ nav:
   - Tools:
     - Backup_geocat.md
     - Delete_unused_subtemplates.md
+    - save_and_close.md
 
 markdown_extensions:
   - attr_list

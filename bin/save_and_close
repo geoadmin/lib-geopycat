@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+
+import argparse
+import geopycat
+from lxml import etree as ET
+from datetime import datetime
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("-env", nargs= '?', const="int", default="int")
+parser.add_argument("--in-groups", nargs="*", type=int)
+parser.add_argument("--not-in-groups", nargs="*", type=int)
+
+args = parser.parse_args()
+
+if __name__ == "__main__":
+
+    geocat = geopycat.geocat(env=args.env)
+    uuids = geocat.get_uuids(with_harvested=False, with_templates=True,
+                in_groups=args.in_groups, not_in_groups=args.not_in_groups)
+
+    logger = geopycat.utils.setup_logger(f"Save&Close_{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+
+    print("Save and close : ", end="\r")
+    count = 0
+
+    for uuid in uuids:
+
+        count += 1
+
+        md = geocat.get_metadata_from_mef(uuid)
+
+        if md is None:
+            print(geopycat.utils.warningred(f"{uuid} - unable to retrieve metadata"))
+            logger.error(f"{uuid} - unable to retrieve metadata")
+            continue
+
+        root = ET.fromstring(md)
+        try:
+            xml_uuid = root.find("gmd:fileIdentifier/gco:CharacterString", 
+                                    namespaces=geopycat.settings.NS).text
+        except:
+            print(geopycat.utils.warningred(f"{uuid} - unable to retrieve uuid"))
+            logger.error(f"{uuid} - unable to retrieve uuid")
+            continue
+
+        body = [{
+            "xpath": "/gmd:fileIdentifier/gco:CharacterString",
+            "value": f"<gn_replace>{geopycat.utils.xmlify(xml_uuid)}</gn_replace>"
+        }]
+
+        response = geocat.edit_metadata(uuid=uuid, body=body, updateDateStamp=False)
+        if geopycat.utils.process_ok(response):
+            print(geopycat.utils.okgreen(f"{uuid} - successfully saved and closed"))
+            logger.info(f"{uuid} - successfully saved and closed")
+        else:
+            print(geopycat.utils.warningred(f"{uuid} - unsuccessfully saved and closed"))
+            logger.error(f"{uuid} - unsuccessfully saved and closed")
+
+        print(f"Save and close : {round((count / len(uuids)) * 100, 1)}%", end="\r")
+    print(f"Save and close : {geopycat.utils.okgreen('Done')}")
