@@ -298,11 +298,15 @@ class GeocatAPI():
 
         headers = {"accept": "application/x-gn-mef-2-zip"}
 
+        params = {
+            "withRelated": False
+        }
+
         proxy_error = True
         while proxy_error:
             try:
                 response = self.session.get(url=self.env + f"/geonetwork/srv/api/records/{uuid}/formatters/zip",
-                                            headers=headers)
+                                            headers=headers, params=params)
             except requests.exceptions.ProxyError:
                 print("Proxy Error Occured, retry connection")
             else:
