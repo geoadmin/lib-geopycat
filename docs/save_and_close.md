@@ -1,4 +1,4 @@
-geopycat provides a CLI script to apply the process done while saving metadata. It's basically save and close metadata.
+geopycat provides a CLI script to apply the process done while saving metadata. It basically saves and closes metadata.
 
 ## Running on UNIX system
 ```bash
@@ -7,7 +7,7 @@ save_and_close [-env [env]]  [--in-groups [in-groups]] [--not-in-groups [not-in-
 
 * `env` int or prod, by default set to int
 * `in-groups` integers : groups ID list, process metadata from these groups. <br>E.g. `--in-groups 42 23 12`
-* `not-in-groups` integers : groups ID list, process metadata **not** from these groups. <br>E.g. `--not-in-groups 42 23 12`
+* `not-in-groups` integers : groups ID list, **do not** process metadata from these groups. <br>E.g. `--not-in-groups 42 23 12`
 
 ## Running on windows
 ```bash
