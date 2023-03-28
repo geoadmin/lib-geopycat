@@ -18,10 +18,10 @@ geocat_backup [-env [env]] [-o] [-m] [-u] [-g] [-s] [-db-user [db username]] [-d
 ```
 env: int or prod
 -o: output folder
--m: do not bakcup metadata
--u: do not bakcup users
--g: do not bakcup groups
--s: do not bakcup subtemplates
+-m: do not backup metadata
+-u: do not backup users
+-g: do not backup groups
+-s: do not backup subtemplates
 db username: database username
 db password: database password
 ```
