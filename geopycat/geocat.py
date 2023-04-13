@@ -479,6 +479,61 @@ class GeocatAPI():
 
         return response
 
+    def search_and_replace(self, search: str, replace: str, escape_wildcard: bool = True):
+        """
+        Performs search and replace at the DB level.
+        """
+
+        if not self.check_admin():
+            raise Exception("You must be admin to use this function")
+
+        metadata_uuids = list()
+
+        if escape_wildcard:
+            search_sql = search.replace("%", "\%")
+        else:
+            search_sql = search
+
+        try:
+            connection = self.db_connect()
+            with connection.cursor() as cursor:
+
+                cursor.execute("SELECT uuid FROM public.metadata where (istemplate='n' OR istemplate='y')" \
+                                f"AND data like '%{search_sql}%'")
+
+                for row in cursor:
+                    metadata_uuids.append(row[0])
+
+        except (Exception, psycopg2.Error) as error:
+            print("Error while fetching data from PostgreSQL", error)
+
+        finally:
+            if connection:
+                connection.close()
+
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
+
+        if len(metadata_uuids) == 0:
+            print(utils.warningred(f"{search} not found in any metadata"))
+            return
+
+        for uuid in metadata_uuids:
+
+            params = {
+                "search": search,
+                "replace": replace,
+                "uuids": [uuid],
+                "updateDateStamp": False
+            }
+
+            response = self.session.post(self.env + "/geonetwork/srv/api/processes/db/search-and-replace",
+                                params=params, headers=headers)
+
+            if utils.process_ok(response):
+                print(utils.okgreen(f"Metadata {uuid} : {search} successfully replaced by {replace}"))
+            else:
+                print(utils.warningred(f"Metadata {uuid} : {search} unsuccessfully replaced by {replace}"))
+
     def delete_metadata(self, uuid: str):
         """
         Delete metadata by giving its uuid. Returns the response of delete request
