@@ -453,6 +453,34 @@ class GeocatAPI():
 
         print(f"Backup metadata : {utils.okgreen('Done')}")    
 
+    def set_metadata_ownership(self, uuid: str, group_id: int, user_id: int) -> object:
+        """
+        Set metadata ownership by giving group and user ID for a given metadata
+        """
+
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+        parameters = {
+            "groupIdentifier": group_id,
+            "userIdentifier": user_id,
+        }
+
+        res = self.session.put(url=self.env + f"/geonetwork/srv/api/records/{uuid}/ownership",
+                                    headers=headers, params=parameters)
+        
+        return res
+
+    def set_metadata_permission(self, uuid: str, permission: dict) -> object:
+        
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+        body = json.dumps(permission)
+
+        res = self.session.put(url=self.env + f"/geonetwork/srv/api/records/{uuid}/sharing",
+                                        headers=headers, data=body)
+
+        return res
+
     def edit_metadata(self, uuid: str, body: list, updateDateStamp: str ='true') -> object:
         """
         Edit a metadata by giving sets of xpath and xml.
