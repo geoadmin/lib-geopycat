@@ -507,6 +507,40 @@ class GeocatAPI():
 
         return response
 
+    def validate_metadata(self, uuid: str) -> object:
+        """
+        Performs internal validation of a given metadata.
+        Internal validation corresponds to the validator inside geocat editor.
+        """
+
+        params = {
+            "currTab": "default",
+            "starteditingsession": "yes"
+        }
+
+        res = self.session.get(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor", 
+                         params=params)
+        
+        if res.status_code != 200:
+            raise Exception("Could not start an edit session")
+        
+        headers = {"accept": "application/json"}
+
+        res = self.session.put(url = self.env + f"/geonetwork/srv/api/records/{uuid}/validate/internal",
+                               headers=headers)
+        
+        if res.status_code != 201:
+
+            self.session.delete(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor")
+            raise Exception("Could not perform validation")
+        
+        res = self.session.delete(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor")
+        
+        if res.status_code != 204:
+            raise Exception("Could not close edit session")
+
+        print(utils.okgreen("metadata successfully validated"))
+
     def search_and_replace(self, search: str, replace: str, escape_wildcard: bool = True):
         """
         Performs search and replace at the DB level.
@@ -562,7 +596,7 @@ class GeocatAPI():
             else:
                 print(utils.warningred(f"Metadata {uuid} : {search} unsuccessfully replaced by {replace}"))
 
-    def delete_metadata(self, uuid: str):
+    def delete_metadata(self, uuid: str) -> object:
         """
         Delete metadata by giving its uuid. Returns the response of delete request
         """

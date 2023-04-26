@@ -5,6 +5,9 @@ import geopycat
 
 
 class Restore(geopycat.geocat):
+    """
+    Class to restore metadata and subtemplates
+    """
 
     def __init__(self, **kwargs):
 
@@ -25,6 +28,11 @@ class Restore(geopycat.geocat):
             raise Exception("Could not fetch groups information")
 
     def __get_permissions(self, xml: bytes) -> dict:
+        """
+        Fetches permissions from info.xml file inside MEF.
+        Args:
+            xml : the info.xml file as bytes
+        """
 
         permissions = {
             "clear": True,
@@ -59,6 +67,12 @@ class Restore(geopycat.geocat):
         return permissions
 
     def restore_metadata_from_mef(self, mef: str):
+        """
+        Restore a metadata from its MEF file.
+        UUID, permissions are taken from MEF.
+        Ownership is taken from exsiting record.
+        An internal validation process is performed on the restored record.
+        """
 
         # Get info.xml from MEF
         filename = os.path.splitext(os.path.basename(mef))[0]
@@ -102,6 +116,9 @@ class Restore(geopycat.geocat):
         res = self.set_metadata_ownership(uuid=uuid, group_id=group_id, user_id=owner_id)
         if not geopycat.utils.process_ok(res):
             raise Exception("Could not set metadata ownership back")
+        
+        # Validate metadata
+        self.validate_metadata(uuid=uuid)
 
         # set permissions (handles publication status as well)
         permission = self.__get_permissions(xml=xml)
@@ -110,4 +127,4 @@ class Restore(geopycat.geocat):
         if res.status_code != 204:
             raise Exception("Could not set metadata permission back")
         
-        print(geopycat.utils.okgreen(f"{uuid} : metadata has been successfully restored"))
+        print(geopycat.utils.okgreen("metadata successfully restored"))
