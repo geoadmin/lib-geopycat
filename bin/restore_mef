@@ -1,10 +1,10 @@
+#!/usr/bin/env python3
+
 import argparse
-import colorama
 import os
 from geopycat.GeocatBackup import Restore
 from geopycat import utils
 
-colorama.init()
 
 parser = argparse.ArgumentParser()
 

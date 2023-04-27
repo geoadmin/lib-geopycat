@@ -33,6 +33,8 @@ setuptools.setup(
         'bin/delete_unused_subtpl.py',
         'bin/delete_unused_subtpl',
         'bin/save_and_close.py',
-        'bin/save_and_close'
+        'bin/save_and_close',
+        'bin/restore_mef.py',
+        'bin/restore_mef'
     ]
 )
