@@ -84,16 +84,7 @@ class Restore(geopycat.geocat):
         uuid = xml_root.find("./general/uuid").text
 
         # Get ownership
-        headers = {"accept": "application/json", "Content-Type": "application/json"}
-
-        res = self.session.get(self.env + f"/geonetwork/srv/api/records/{uuid}/sharing",
-                                    headers=headers)
-
-        if res.status_code == 200:
-            owner_id = res.json()["owner"]
-            group_id = res.json()["groupOwner"]
-        else:
-            raise Exception("Could not fetch owner information")
+        ownership = self.get_metadata_ownership(uuid=uuid)
 
         # Upload MEF
         headers = {"accept": "application/json"}
@@ -101,7 +92,7 @@ class Restore(geopycat.geocat):
         params = {
             "metadataType": "METADATA",
             "uuidProcessing": "OVERWRITE",
-            "group": group_id,
+            "group": ownership["group_ID"],
             "transformWith": "_none_"
         }
 
@@ -111,11 +102,6 @@ class Restore(geopycat.geocat):
 
         if not geopycat.utils.process_ok(res):
             raise Exception("Could not upload metadata")
-
-        # set ownership
-        res = self.set_metadata_ownership(uuid=uuid, group_id=group_id, user_id=owner_id)
-        if not geopycat.utils.process_ok(res):
-            raise Exception("Could not set metadata ownership back")
         
         # Validate metadata
         self.validate_metadata(uuid=uuid)
@@ -127,4 +113,10 @@ class Restore(geopycat.geocat):
         if res.status_code != 204:
             raise Exception("Could not set metadata permission back")
         
+        # set ownership
+        res = self.set_metadata_ownership(uuid=uuid, group_id=ownership["group_ID"], 
+                                            user_id=ownership["owner_ID"])
+        if not geopycat.utils.process_ok(res):
+            raise Exception("Could not set metadata ownership back")
+
         print(geopycat.utils.okgreen("metadata successfully restored"))
