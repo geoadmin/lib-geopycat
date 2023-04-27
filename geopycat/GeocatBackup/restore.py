@@ -118,5 +118,3 @@ class Restore(geopycat.geocat):
                                             user_id=ownership["owner_ID"])
         if not geopycat.utils.process_ok(res):
             raise Exception("Could not set metadata ownership back")
-
-        print(geopycat.utils.okgreen("metadata successfully restored"))

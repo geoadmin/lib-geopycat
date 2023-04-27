@@ -73,7 +73,8 @@ GET_MD_INDEX_API_BODY = {
                     "terms": {
                         "isTemplate": [
                             "n",
-                            "y"
+                            "y",
+                            "s"
                         ]
                     }
                 }

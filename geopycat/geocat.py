@@ -531,8 +531,6 @@ class GeocatAPI():
         if res.status_code != 204:
             raise Exception("Could not close edit session")
 
-        print(utils.okgreen("metadata successfully validated"))
-
     def search_and_replace(self, search: str, replace: str, escape_wildcard: bool = True):
         """
         Performs search and replace at the DB level.
