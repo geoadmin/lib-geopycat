@@ -343,27 +343,19 @@ class GeocatAPI():
         else:
             print(f"{utils.warningred('Could not retrieve index for md : ') + uuid}")
 
-    def get_metadata_groupowner_id(self, uuid: str) -> str:
+    def get_metadata_ownership(self, uuid: str) -> str:
         """
-        Returns the metadata group owner ID
+        Returns the metadata group owner ID and user owner ID
         """
 
-        headers = {"accept": "application/json"}
+        index = self.get_metadata_index(uuid=uuid)
 
-        proxy_error = True
-        while proxy_error:
-            try:
-                response = self.session.get(url=self.env + f"/geonetwork/srv/api/records/{uuid}/sharing",
-                                            headers=headers)
-            except requests.exceptions.ProxyError:
-                print("Proxy Error Occured, retry connection")
-            else:
-                proxy_error = False
-        
-        if response.status_code == 200:
-            return response.json()["groupOwner"]
-        else:
-            print(f"{utils.warningred('Could not retrieve group owner ID for md : ') + uuid}")
+        ownership = {
+            "owner_ID": int(index["ownerId"]),
+            "group_ID": int(index["_source"]["groupOwner"])
+        }
+
+        return ownership
 
     def backup_metadata(self, uuids: list, backup_dir: str = None, with_related: bool = True):
         """
@@ -453,6 +445,34 @@ class GeocatAPI():
 
         print(f"Backup metadata : {utils.okgreen('Done')}")    
 
+    def set_metadata_ownership(self, uuid: str, group_id: int, user_id: int) -> object:
+        """
+        Set metadata ownership by giving group and user ID for a given metadata
+        """
+
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+        parameters = {
+            "groupIdentifier": group_id,
+            "userIdentifier": user_id,
+        }
+
+        res = self.session.put(url=self.env + f"/geonetwork/srv/api/records/{uuid}/ownership",
+                                    headers=headers, params=parameters)
+        
+        return res
+
+    def set_metadata_permission(self, uuid: str, permission: dict) -> object:
+        
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+        body = json.dumps(permission)
+
+        res = self.session.put(url=self.env + f"/geonetwork/srv/api/records/{uuid}/sharing",
+                                        headers=headers, data=body)
+
+        return res
+
     def edit_metadata(self, uuid: str, body: list, updateDateStamp: str ='true') -> object:
         """
         Edit a metadata by giving sets of xpath and xml.
@@ -478,6 +498,38 @@ class GeocatAPI():
                                     params=params, headers=headers, data=body)
 
         return response
+
+    def validate_metadata(self, uuid: str) -> object:
+        """
+        Performs internal validation of a given metadata.
+        Internal validation corresponds to the validator inside geocat editor.
+        """
+
+        params = {
+            "currTab": "default",
+            "starteditingsession": "yes"
+        }
+
+        res = self.session.get(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor", 
+                         params=params)
+        
+        if res.status_code != 200:
+            raise Exception("Could not start an edit session")
+        
+        headers = {"accept": "application/json"}
+
+        res = self.session.put(url = self.env + f"/geonetwork/srv/api/records/{uuid}/validate/internal",
+                               headers=headers)
+        
+        if res.status_code != 201:
+
+            self.session.delete(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor")
+            raise Exception("Could not perform validation")
+        
+        res = self.session.delete(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor")
+        
+        if res.status_code != 204:
+            raise Exception("Could not close edit session")
 
     def search_and_replace(self, search: str, replace: str, escape_wildcard: bool = True):
         """
@@ -534,7 +586,7 @@ class GeocatAPI():
             else:
                 print(utils.warningred(f"Metadata {uuid} : {search} unsuccessfully replaced by {replace}"))
 
-    def delete_metadata(self, uuid: str):
+    def delete_metadata(self, uuid: str) -> object:
         """
         Delete metadata by giving its uuid. Returns the response of delete request
         """

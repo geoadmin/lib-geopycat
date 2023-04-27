@@ -29,12 +29,16 @@ nav:
   - geocat.md
   - Tools:
     - Backup_geocat.md
+    - Restore_mef.md
     - Delete_unused_subtemplates.md
     - save_and_close.md
 
 markdown_extensions:
   - attr_list
   - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
 
 extra_css:
   - stylesheets/extra.css
