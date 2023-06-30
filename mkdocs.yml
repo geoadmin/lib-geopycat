@@ -24,6 +24,9 @@ theme:
   features:
     - content.code.copy
 
+plugins:
+    - termynal
+
 nav:
   - index.md
   - geocat.md
