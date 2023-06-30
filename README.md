@@ -1,6 +1,8 @@
 # geopycat
 The python package to manage (meta)data of geocat.ch - the modified instance of geonetwork for
 Switzerland.
+## Documentation
+All documentation is available [here](https://benoitregamey.github.io/geopycat).
 ## Installation
 **Using pip** -  install from github
 ```
@@ -8,7 +10,5 @@ pip install git+https://github.com/benoitregamey/geopycat.git
 ```
 **From swisstopo network** - through proxy
 ```
-"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host github.com --proxy=proxy-bvcol.admin.ch:8080 git+https://github.com/benoitregamey/geopycat.git
+"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host github.com --trusted-host pypi.org --trusted-host pypi.python.org --proxy=proxy-bvcol.admin.ch:8080 git+https://github.com/benoitregamey/geopycat.git
 ```
-## Documentation
-All documentation is available [here](https://benoitregamey.github.io/geopycat).
