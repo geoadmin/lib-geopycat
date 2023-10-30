@@ -20,29 +20,51 @@ def xpath_ns_code2url(path: str) -> str:
     return path
 
 
-def setup_logger(name: str, level=logging.INFO) -> object:
-    """Setup a logger for logging
+def get_log_config(logfile: str = None, level: str = "INFO"):
+    """
+    Generates a config dict for logging module
 
-    Args:
-        name: required, the mane of the logger
-        log_file: required, the path where to write the logger
-        level: optional, the level to log
+    Parameters:
+        logfile: If log file should be written, specify the path
+        level: logging level
 
     Returns:
-        Logger object
+        A dict for the method logging.config.dictConfig()
     """
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", '%d-%m-%y %H:%M:%S')
 
-    logfile = f"{name}.log"
+    config = {
+        "version":1,
+        "root":{
+            "handlers" : ["console"],
+            "level": level
+        },
+        "handlers":{
+            "console":{
+                "formatter": "std_out",
+                "class": "logging.StreamHandler",
+                "level": level
+            }  
+        },
+        "formatters":{
+            "std_out": {
+                "format": "%(asctime)s - %(levelname)s - %(message)s",
+                "datefmt":"%Y-%m-%d %H:%M:%S"
+            }
+        },
+    }
+    
+    if logfile is not None:
 
-    handler = logging.FileHandler(logfile)
+        config["root"]["handlers"].append("file")
 
-    handler.setFormatter(formatter)
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.addHandler(handler)
-
-    return logger
+        config["handlers"]["file"] = {
+                "formatter": "std_out",
+                "class": "logging.FileHandler",
+                "level": level,
+                "filename": logfile
+        }
+    
+    return config
 
 
 def okgreen(text):

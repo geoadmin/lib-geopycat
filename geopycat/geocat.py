@@ -14,6 +14,7 @@ import psycopg2
 from geopycat import settings
 from geopycat import utils
 
+load_dotenv()
 
 class GeocatAPI():
     """
@@ -22,10 +23,12 @@ class GeocatAPI():
     Store request's session, XSRF Token, http authentication, proxies
 
     Parameters :
-        env -> str (default = 'int'), can be set to 'prod'
+        env (str) (default = 'int'), can be set to 'prod'
     """
 
-    def __init__(self, env: str = 'int'):
+    def __init__(self, env: str = 'int', username: str = None, password: str = None,
+                no_login: bool = False):
+
         if env not in settings.ENV:
             print(utils.warningred(f"No environment : {env}"))
             sys.exit()
@@ -33,9 +36,28 @@ class GeocatAPI():
             print(utils.warningred("WARNING : you choose the Production environment ! " \
                 "Be careful, all changes will be live on geocat.ch"))
         self.env = settings.ENV[env]
-        self.__username = input("Geocat Username or press enter to continue without login: ")
-        if self.__username != "":
-            self.__password = getpass.getpass("Geocat Password : ")
+
+        if no_login:
+            self.__username = ""
+
+        else:
+            # Access credentials from env variable if not given in parameters
+            if username is None:
+                self.__username = os.getenv('GEOCAT_USERNAME')
+            else:
+                self.__username = username
+            
+            if password is None:
+                self.__password = os.getenv('GEOCAT_PASSWORD')
+            else:
+                self.__password = password
+
+            # If credentials not found in env variables, prompt for it
+            if self.__username is None or self.__password is None:
+                self.__username = input("Geocat Username or press enter to continue without login: ")
+                if self.__username != "":
+                    self.__password = getpass.getpass("Geocat Password : ")
+
         self.session = self.__get_token()
 
     def __get_token(self) -> object:
@@ -78,9 +100,7 @@ class GeocatAPI():
     def db_connect(self) -> object:
         """Connect to geocat DB and returns a psycopg2 connection object"""
 
-        # Access database credentials from .env variable if exist
-        load_dotenv()
-
+        # Access database credentials from env variable if exists
         db_username = os.getenv('DB_USERNAME')
         db_password = os.getenv('DB_PASSWORD')
 
@@ -182,7 +202,17 @@ class GeocatAPI():
                     not_in_groups: list = None, keywords: list = None, q: str = None) -> list:
         """
         Get a list of metadata uuid.
-        You can specify if you want or not : harvested, valid, published records and templates.
+        The AND operator is used between the parameters, The OR operator is used within parameter (list).
+
+        Parameters:
+            with_harvested (bool): fetches harvested records as well
+            valid_only (bool): fetches only valid records
+            published_only (bool): fetches only published records
+            with_templates (bool): fetches templates records as well
+            in_groups (list): fetches records belonging to list of group ids. ids given as int
+            not_in_groups (list): fetches records not belonging to list of group ids. ids given as int
+            keywords (list): fetches records having at least one of the given keywords
+            q (str): search unsing the lucene query synthax
         """
 
         body = copy.deepcopy(settings.SEARCH_UUID_API_BODY)
@@ -232,9 +262,14 @@ class GeocatAPI():
                         with_template: bool = False) -> dict:
         """
         Get UUID of all reusable objects (subtemplates).
-        You can specify if you want only the valid and/or published records.
-        The subtemplates template are not returned.
-        Returns a dictionnary with the 3 kinds of RO : {"contact": ,"extent": ,"format": }
+
+        Paramters:
+            valid_only (bool): fetches only valid records
+            published_only (bool): fetches only published records
+            with_templates (bool): fetches templates records as well        
+
+        Returns:
+            Dict with the 3 kinds of RO : {"contact": list,"extent": list,"format": list}
         """
 
         if not self.check_admin():
@@ -294,6 +329,9 @@ class GeocatAPI():
     def get_metadata_from_mef(self, uuid: str) -> bytes:
         """
         Get metadata XML from MEF (metadata exchange format).
+
+        Parameters:
+            uuid: metadata's UUID
         """
 
         headers = {"accept": "application/x-gn-mef-2-zip"}
@@ -324,7 +362,10 @@ class GeocatAPI():
 
     def get_metadata_index(self, uuid: str) -> dict:
         """
-        Fetches the elastic search index for a given metadata UUID
+        Fetches the elastic search index for a given metadata
+
+        Parameters:
+            uuid: metadata's UUID
         """
 
         body = copy.deepcopy(settings.GET_MD_INDEX_API_BODY)
@@ -346,6 +387,12 @@ class GeocatAPI():
     def get_metadata_ownership(self, uuid: str) -> str:
         """
         Returns the metadata group owner ID and user owner ID
+
+        Parameters:
+            uuid: metadata's UUID
+
+        Returns:
+            Dict {"owner_ID": int, "group_ID": int}
         """
 
         index = self.get_metadata_index(uuid=uuid)
@@ -360,6 +407,11 @@ class GeocatAPI():
     def backup_metadata(self, uuids: list, backup_dir: str = None, with_related: bool = True):
         """
         Backup list of metadata as MEF zip file.
+
+        Parameters:
+            uuids (list): list of metadata uuids to export
+            Backup_dir (str): path to directory where to save the metadata
+            with_related (bool): export related metadata as well
         """
         if backup_dir is None:
             backup_dir = f"MetadataBackup_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
@@ -404,6 +456,10 @@ class GeocatAPI():
     def backup_metadata_xml(self, uuids: list, backup_dir: str = None):
         """
         Backup list of metadata as XML file.
+
+        Parameters:
+            uuids (list): list of metadata uuids to export
+            Backup_dir (str): path to directory where to save the metadata
         """
         if backup_dir is None:
             backup_dir = f"MetadataBackup_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
@@ -447,7 +503,12 @@ class GeocatAPI():
 
     def set_metadata_ownership(self, uuid: str, group_id: int, user_id: int) -> object:
         """
-        Set metadata ownership by giving group and user ID for a given metadata
+        Set metadata ownership
+
+        Parameters:
+            uuid (str): metadata's uuid
+            group_id (int): new group ID
+            user_id (int): new user ID
         """
 
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
@@ -463,7 +524,14 @@ class GeocatAPI():
         return res
 
     def set_metadata_permission(self, uuid: str, permission: dict) -> object:
-        
+        """
+        Set metadata permission
+
+        Parameters:
+            uuid (str): metadata's uuid
+            permission (dict): permission in form of dict.
+        """
+     
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
         body = json.dumps(permission)
@@ -478,9 +546,9 @@ class GeocatAPI():
         Edit a metadata by giving sets of xpath and xml.
 
         Args:
-            uuid : the uuid of the metadata to edit.
-            body : the edits you want to perform : [{"xpath": xpath, "value": xml}, ...]
-            updateDateStamp : 'true' or 'false', default = 'true'. If 'false',
+            uuid (str) : the uuid of the metadata to edit.
+            body (list) : the edits you want to perform : [{"xpath": xpath, "value": xml}, ...]
+            updateDateStamp (bool): 'true' or 'false', default = 'true'. If 'false',
             the update date and time of the metadata is not updated.
 
         Returns:
@@ -503,6 +571,9 @@ class GeocatAPI():
         """
         Performs internal validation of a given metadata.
         Internal validation corresponds to the validator inside geocat editor.
+
+        Parameters:
+            uuid: metadata's UUID
         """
 
         params = {
@@ -534,6 +605,11 @@ class GeocatAPI():
     def search_and_replace(self, search: str, replace: str, escape_wildcard: bool = True):
         """
         Performs search and replace at the DB level.
+
+        Parameters:
+            search (str): value to search for
+            replace (str): replace by this value
+            escape_wildcard (bool): if True, "%" wildcard are escaped "\%"
         """
 
         if not self.check_admin():
@@ -588,7 +664,13 @@ class GeocatAPI():
 
     def delete_metadata(self, uuid: str) -> object:
         """
-        Delete metadata by giving its uuid. Returns the response of delete request
+        Delete metadata
+
+        Parameters:
+            uuid: metadata's UUID
+
+        Returns:
+            The response of the request delete
         """
 
         headers = {"accept": "application/json", "Content-Type": "application/json"}

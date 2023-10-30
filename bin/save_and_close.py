@@ -1,3 +1,5 @@
+import logging
+import logging.config
 import argparse
 import colorama
 import geopycat
@@ -20,7 +22,10 @@ if __name__ == "__main__":
     uuids = geocat.get_uuids(with_harvested=False, with_templates=True,
                 in_groups=args.in_groups, not_in_groups=args.not_in_groups)
 
-    logger = geopycat.utils.setup_logger(f"Save&Close_{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+    log_config = geopycat.utils.get_log_config(f"Save&Close_{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+    logging.config.dictConfig(log_config)
+
+    logger = logging.getLogger(__name__)
 
     print("Save and close : ", end="\r")
     count = 0

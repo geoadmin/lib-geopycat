@@ -70,7 +70,7 @@ class Restore(geopycat.geocat):
         """
         Restore a metadata from its MEF file.
         UUID, permissions are taken from MEF.
-        Ownership is taken from exsiting record.
+        Ownership is taken from existing record.
         An internal validation process is performed on the restored record.
         """
 
