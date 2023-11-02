@@ -31,12 +31,14 @@ plugins:
 
 nav:
   - index.md
-  - geocat.md
-  - Tools:
-    - Backup_geocat.md
-    - Restore_mef.md
-    - Delete_unused_subtemplates.md
-    - save_and_close.md
+  - getting-started.md
+  - Reference:
+    - geocat.md
+  - CLI Tools:
+    - cli_tools/Backup_geocat.md
+    - cli_tools/Restore_mef.md
+    - cli_tools/Delete_unused_subtemplates.md
+    - cli_tools/save_and_close.md
 
 markdown_extensions:
   - attr_list
@@ -47,3 +49,6 @@ markdown_extensions:
 
 extra_css:
   - stylesheets/extra.css
+
+repo_url: https://github.com/benoitregamey/geopycat
+repo_name: geopycat
