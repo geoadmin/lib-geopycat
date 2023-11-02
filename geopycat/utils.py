@@ -20,13 +20,14 @@ def xpath_ns_code2url(path: str) -> str:
     return path
 
 
-def get_log_config(logfile: str = None, level: str = "INFO"):
+def get_log_config(logfile: str = None, level: str = "INFO", log2stdout: bool = True):
     """
     Generates a config dict for logging module
 
     Parameters:
         logfile: If log file should be written, specify the path
         level: logging level
+        log2stdout: If true, print log to std out as well
 
     Returns:
         A dict for the method logging.config.dictConfig()
@@ -35,16 +36,10 @@ def get_log_config(logfile: str = None, level: str = "INFO"):
     config = {
         "version":1,
         "root":{
-            "handlers" : ["console"],
+            "handlers" : [],
             "level": level
         },
-        "handlers":{
-            "console":{
-                "formatter": "std_out",
-                "class": "logging.StreamHandler",
-                "level": level
-            }  
-        },
+        "handlers":{},
         "formatters":{
             "std_out": {
                 "format": "%(asctime)s - %(levelname)s - %(message)s",
@@ -52,6 +47,16 @@ def get_log_config(logfile: str = None, level: str = "INFO"):
             }
         },
     }
+
+    if log2stdout:
+
+        config["root"]["handlers"].append("console")
+
+        config["handlers"]["console"] = {
+                "formatter": "std_out",
+                "class": "logging.StreamHandler",
+                "level": level
+        }
     
     if logfile is not None:
 

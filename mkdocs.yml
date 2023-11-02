@@ -23,9 +23,11 @@ theme:
 
   features:
     - content.code.copy
+    - navigation.tabs
 
 plugins:
     - termynal
+    - search
 
 nav:
   - index.md
