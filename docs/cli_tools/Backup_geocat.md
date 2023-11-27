@@ -12,7 +12,7 @@ DB_PASSWORD=password
 ```
 
 ## Running on UNIX system
-```bash
+``` bash
 geocat_backup [-env [env]] [-o] [-m] [-u] [-g] [-s] [-db-user [db username]] [-db-password [db password]]
 ```
 ```

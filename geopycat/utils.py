@@ -143,4 +143,59 @@ def xmlify(string: str) -> str:
     string = string.replace('"', "&quot;")
 
     return string
+
+
+def get_search_query(**kwargs) -> dict:
+    """
+    Returns the query syntax for ES search API.
     
+    This query is in a form of a python dict and is
+    to be inserted in a ES API request's body.
+    """
+
+    query = {
+        "bool": {
+            "must": []
+        }
+    }
+
+    if kwargs["with_templates"]:
+        query["bool"]["must"].append({"terms": {"isTemplate": ["y", "n"]}})
+    else:
+        query["bool"]["must"].append({"terms": {"isTemplate": ["n"]}})
+
+    query_string = str()
+
+    if not kwargs["with_harvested"]:
+        query_string = query_string + "(isHarvested:\"false\") AND"
+
+    if kwargs["valid_only"]:
+        query_string = query_string + "(valid:\"1\") AND"
+
+    if kwargs["published_only"]:
+        query_string = query_string + "(isPublishedToAll:\"true\") AND"
+
+    if kwargs["in_groups"] is not None:
+        toadd = " OR ".join([f"groupOwner:\"{i}\"" for i in kwargs["in_groups"]])
+        query_string = query_string + f"({toadd}) AND"
+
+    if kwargs["not_in_groups"] is not None:
+        toadd = " OR ".join([f"-groupOwner:\"{i}\"" for i in kwargs["not_in_groups"]])
+        query_string = query_string + f"({toadd}) AND"
+
+    if kwargs["keywords"] is not None:
+        query_kw = " OR ".join([f"tag.default:\"{i}\" OR tag.langfre:\"{i}\"" \
+            f"OR tag.langger:\"{i}\" OR tag.langita:\"{i}\" OR tag.langeng:\"{i}\""
+            for i in kwargs["keywords"]])
+
+        query_string = query_string + f"({query_kw}) AND"
+
+    if kwargs["q"] is not None:
+        query_string = query_string + f"({kwargs['q']}) AND"
+
+    if len(query_string) > 0:
+        query_string = query_string[:-4]
+        query["bool"]["must"].insert(0, {"query_string": {"query": query_string,
+                "default_operator": "AND"}})
+    
+    return query
