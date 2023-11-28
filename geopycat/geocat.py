@@ -24,6 +24,9 @@ class GeocatAPI():
 
     Parameters :
         env (str) (default = 'int'), can be set to 'prod'
+        username: geocat username
+        password: geocat password
+        no_login: if set to true, use the package without being authenticated in geocat
     """
 
     def __init__(self, env: str = 'int', username: str = None, password: str = None,
@@ -118,10 +121,12 @@ class GeocatAPI():
 
         return connection
 
-    def __search_uuid(self, body: dict) -> list:
+    def es_deep_search(self, body: dict) -> list:
         """
         Performs deep paginated search using ES search API request.
         Args: body, the request's body
+
+        returns list of metadata index
         """
         uuids = []
 
@@ -157,7 +162,7 @@ class GeocatAPI():
 
                 if response.status_code == 200:
                     for hit in response.json()["hits"]["hits"]:
-                        uuids.append(hit["_source"]["uuid"])
+                        uuids.append(hit)
 
                     if len(response.json()["hits"]["hits"]) < size:
                         break
@@ -197,6 +202,69 @@ class GeocatAPI():
                 return True
         return False
 
+    def get_users(self, admin: bool = True, useradmin: bool = True, reviewer: bool = True,
+                editor: bool = True, registered_user: bool = True, inactive: bool = True,
+                owner_only : bool = False) -> list:
+        """
+        Get list of geocat users
+
+        Args:
+            admin: include Administrator profile
+            useradmin: include UserAdmin profile
+            reviewer: include Reviewer profile
+            editor: include Editor profile
+            registered_user: include RegisteredUser profile
+            inactive: include disabled users
+            owner_only: get only users that have at least one record
+        """
+
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
+
+        users = []
+
+        if owner_only:
+
+            res = self.session.get(url=f"{self.env}/geonetwork/srv/api/users/owners",
+                                    headers=headers)
+            res.raise_for_status()
+
+            for owner in res.json():
+                res = self.session.get(url=f"{self.env}/geonetwork/srv/api/users/{owner['id']}",
+                                    headers=headers)
+
+                if res.status_code == 200:
+                    users.append(res.json())
+                else:
+                    print(f"{utils.warningred('No information retrieved from user : ') + owner['id']}")
+
+        else:
+
+            res = self.session.get(url=f"{self.env}/geonetwork/srv/api/users",
+                                    headers=headers)
+            res.raise_for_status()
+
+            users = res.json()
+
+        if not admin:
+            users = [user for user in users if user['profile'] != "Administrator" ]
+        
+        if not useradmin:
+            users = [user for user in users if user['profile'] != "UserAdmin" ]
+
+        if not reviewer:
+            users = [user for user in users if user['profile'] != "Reviewer" ]
+
+        if not editor:
+            users = [user for user in users if user['profile'] != "Editor" ]
+
+        if not registered_user:
+            users = [user for user in users if user['profile'] != "RegisteredUser" ]
+
+        if not inactive:
+            users = [user for user in users if user['enabled'] is True ]
+
+        return users
+
     def get_uuids(self, with_harvested: bool = True, valid_only: bool = False, published_only:
                     bool = False, with_templates: bool = False, in_groups: list = None,
                     not_in_groups: list = None, keywords: list = None, q: str = None) -> list:
@@ -212,51 +280,21 @@ class GeocatAPI():
             in_groups (list): fetches records belonging to list of group ids. ids given as int
             not_in_groups (list): fetches records not belonging to list of group ids. ids given as int
             keywords (list): fetches records having at least one of the given keywords
-            q (str): search unsing the lucene query synthax
+            q (str): search using the lucene query synthax
         """
 
         body = copy.deepcopy(settings.SEARCH_UUID_API_BODY)
 
-        if with_templates:
-            body["query"]["bool"]["must"].append({"terms": {"isTemplate": ["y", "n"]}})
-        else:
-            body["query"]["bool"]["must"].append({"terms": {"isTemplate": ["n"]}})
+        query = utils.get_search_query(with_harvested=with_harvested, valid_only=valid_only,
+                                published_only=published_only, with_templates=with_templates,
+                                in_groups=in_groups, not_in_groups=not_in_groups, 
+                                keywords=keywords, q=q)
 
-        query_string = str()
+        body["query"] = query
 
-        if not with_harvested:
-            query_string = query_string + "(isHarvested:\"false\") AND"
+        indexes = self.es_deep_search(body=body)
 
-        if valid_only:
-            query_string = query_string + "(valid:\"1\") AND"
-
-        if published_only:
-            query_string = query_string + "(isPublishedToAll:\"true\") AND"
-
-        if in_groups is not None:
-            toadd = " OR ".join([f"groupOwner:\"{i}\"" for i in in_groups])
-            query_string = query_string + f"({toadd}) AND"
-
-        if not_in_groups is not None:
-            toadd = " OR ".join([f"-groupOwner:\"{i}\"" for i in not_in_groups])
-            query_string = query_string + f"({toadd}) AND"
-
-        if keywords is not None:
-            query_kw = " OR ".join([f"tag.default:\"{i}\" OR tag.langfre:\"{i}\"" \
-                f"OR tag.langger:\"{i}\" OR tag.langita:\"{i}\" OR tag.langeng:\"{i}\""
-                for i in keywords])
-
-            query_string = query_string + f"({query_kw}) AND"
-
-        if q is not None:
-            query_string = query_string + f"({q}) AND"
-
-        if len(query_string) > 0:
-            query_string = query_string[:-4]
-            body["query"]["bool"]["must"].insert(0, {"query_string": {"query": query_string,
-                    "default_operator": "AND"}})
-
-        return self.__search_uuid(body=body)
+        return [i["_source"]["uuid"] for i in indexes]
 
     def get_ro_uuids(self, valid_only: bool = False, published_only: bool = False,
                         with_template: bool = False) -> dict:
