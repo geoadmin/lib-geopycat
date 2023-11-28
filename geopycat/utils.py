@@ -66,7 +66,8 @@ def get_log_config(logfile: str = None, level: str = "INFO", log2stdout: bool = 
                 "formatter": "std_out",
                 "class": "logging.FileHandler",
                 "level": level,
-                "filename": logfile
+                "filename": logfile,
+                "encoding": "utf-8"
         }
     
     return config
@@ -145,7 +146,9 @@ def xmlify(string: str) -> str:
     return string
 
 
-def get_search_query(**kwargs) -> dict:
+def get_search_query(with_harvested: bool = True, valid_only: bool = False, published_only:
+                    bool = False, with_templates: bool = False, in_groups: list = None,
+                    not_in_groups: list = None, keywords: list = None, q: str = None) -> dict:
     """
     Returns the query syntax for ES search API.
     
@@ -169,39 +172,39 @@ def get_search_query(**kwargs) -> dict:
         }
     }
 
-    if kwargs["with_templates"]:
+    if with_templates:
         query["bool"]["must"].append({"terms": {"isTemplate": ["y", "n"]}})
     else:
         query["bool"]["must"].append({"terms": {"isTemplate": ["n"]}})
 
     query_string = str()
 
-    if not kwargs["with_harvested"]:
+    if not with_harvested:
         query_string = query_string + "(isHarvested:\"false\") AND"
 
-    if kwargs["valid_only"]:
+    if valid_only:
         query_string = query_string + "(valid:\"1\") AND"
 
-    if kwargs["published_only"]:
+    if published_only:
         query_string = query_string + "(isPublishedToAll:\"true\") AND"
 
-    if kwargs["in_groups"] is not None:
-        toadd = " OR ".join([f"groupOwner:\"{i}\"" for i in kwargs["in_groups"]])
+    if in_groups is not None:
+        toadd = " OR ".join([f"groupOwner:\"{i}\"" for i in in_groups])
         query_string = query_string + f"({toadd}) AND"
 
-    if kwargs["not_in_groups"] is not None:
-        toadd = " OR ".join([f"-groupOwner:\"{i}\"" for i in kwargs["not_in_groups"]])
+    if not_in_groups is not None:
+        toadd = " OR ".join([f"-groupOwner:\"{i}\"" for i in not_in_groups])
         query_string = query_string + f"({toadd}) AND"
 
-    if kwargs["keywords"] is not None:
+    if keywords is not None:
         query_kw = " OR ".join([f"tag.default:\"{i}\" OR tag.langfre:\"{i}\"" \
             f"OR tag.langger:\"{i}\" OR tag.langita:\"{i}\" OR tag.langeng:\"{i}\""
-            for i in kwargs["keywords"]])
+            for i in keywords])
 
         query_string = query_string + f"({query_kw}) AND"
 
-    if kwargs["q"] is not None:
-        query_string = query_string + f"({kwargs['q']}) AND"
+    if q is not None:
+        query_string = query_string + f"({q}) AND"
 
     if len(query_string) > 0:
         query_string = query_string[:-4]
