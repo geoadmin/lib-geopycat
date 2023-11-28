@@ -121,7 +121,7 @@ class GeocatAPI():
 
         return connection
 
-    def __deep_search(self, body: dict) -> list:
+    def es_deep_search(self, body: dict) -> list:
         """
         Performs deep paginated search using ES search API request.
         Args: body, the request's body
@@ -229,7 +229,7 @@ class GeocatAPI():
 
         body["query"] = query
 
-        indexes = self.__deep_search(body=body)
+        indexes = self.es_deep_search(body=body)
 
         return [i["_source"]["uuid"] for i in indexes]
 
