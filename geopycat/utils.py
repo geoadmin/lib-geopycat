@@ -149,8 +149,18 @@ def get_search_query(**kwargs) -> dict:
     """
     Returns the query syntax for ES search API.
     
-    This query is in a form of a python dict and is
-    to be inserted in a ES API request's body.
+    Parameters:
+        with_harvested (bool): fetches harvested records as well
+        valid_only (bool): fetches only valid records
+        published_only (bool): fetches only published records
+        with_templates (bool): fetches templates records as well
+        in_groups (list): fetches records belonging to list of group ids. ids given as int
+        not_in_groups (list): fetches records not belonging to list of group ids. ids given as int
+        keywords (list): fetches records having at least one of the given keywords
+        q (str): search unsing the lucene query synthax
+
+    Returns:
+        A python dict to be inserted in a ES API request's body.
     """
 
     query = {

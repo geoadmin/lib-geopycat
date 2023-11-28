@@ -202,6 +202,69 @@ class GeocatAPI():
                 return True
         return False
 
+    def get_users(self, admin: bool = True, useradmin: bool = True, reviewer: bool = True,
+                editor: bool = True, registered_user: bool = True, inactive: bool = True,
+                owner_only : bool = False) -> list:
+        """
+        Get list of geocat users
+
+        Args:
+            admin: include Administrator profile
+            useradmin: include UserAdmin profile
+            reviewer: include Reviewer profile
+            editor: include Editor profile
+            registered_user: include RegisteredUser profile
+            inactive: include disabled users
+            owner_only: get only users that have at least one record
+        """
+
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
+
+        users = []
+
+        if owner_only:
+
+            res = self.session.get(url=f"{self.env}/geonetwork/srv/api/users/owners",
+                                    headers=headers)
+            res.raise_for_status()
+
+            for owner in res.json():
+                res = self.session.get(url=f"{self.env}/geonetwork/srv/api/users/{owner['id']}",
+                                    headers=headers)
+
+                if res.status_code == 200:
+                    users.append(res.json())
+                else:
+                    print(f"{utils.warningred('No information retrieved from user : ') + owner['id']}")
+
+        else:
+
+            res = self.session.get(url=f"{self.env}/geonetwork/srv/api/users",
+                                    headers=headers)
+            res.raise_for_status()
+
+            users = res.json()
+
+        if not admin:
+            users = [user for user in users if user['profile'] != "Administrator" ]
+        
+        if not useradmin:
+            users = [user for user in users if user['profile'] != "UserAdmin" ]
+
+        if not reviewer:
+            users = [user for user in users if user['profile'] != "Reviewer" ]
+
+        if not editor:
+            users = [user for user in users if user['profile'] != "Editor" ]
+
+        if not registered_user:
+            users = [user for user in users if user['profile'] != "RegisteredUser" ]
+
+        if not inactive:
+            users = [user for user in users if user['enabled'] is True ]
+
+        return users
+
     def get_uuids(self, with_harvested: bool = True, valid_only: bool = False, published_only:
                     bool = False, with_templates: bool = False, in_groups: list = None,
                     not_in_groups: list = None, keywords: list = None, q: str = None) -> list:
@@ -217,7 +280,7 @@ class GeocatAPI():
             in_groups (list): fetches records belonging to list of group ids. ids given as int
             not_in_groups (list): fetches records not belonging to list of group ids. ids given as int
             keywords (list): fetches records having at least one of the given keywords
-            q (str): search unsing the lucene query synthax
+            q (str): search using the lucene query synthax
         """
 
         body = copy.deepcopy(settings.SEARCH_UUID_API_BODY)
