@@ -13,7 +13,7 @@ Installed
 ```
 **From swisstopo network** - through proxy
 ```console
-"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host github.com --proxy=proxy-bvcol.admin.ch:8080 git+https://github.com/benoitregamey/geopycat.git
+"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --trusted-host github.com --proxy=proxy-bvcol.admin.ch:8080 git+https://github.com/benoitregamey/geopycat.git
 ```
 **Install an older version**
 ```console
@@ -37,5 +37,5 @@ $ pip3 install .
 If on **swisstopo network**
 ```console
 cd geopycat-main
-"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host pypi.org --trusted-host pypi.python.org --proxy=proxy-bvcol.admin.ch:8080 .
+"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --proxy=proxy-bvcol.admin.ch:8080 .
 ```
