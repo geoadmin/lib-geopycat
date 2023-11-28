@@ -10,5 +10,5 @@ pip install git+https://github.com/benoitregamey/geopycat.git
 ```
 **From swisstopo network** - through proxy
 ```
-"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host github.com --trusted-host pypi.org --trusted-host pypi.python.org --proxy=proxy-bvcol.admin.ch:8080 git+https://github.com/benoitregamey/geopycat.git
+"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host github.com --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --proxy=proxy-bvcol.admin.ch:8080 git+https://github.com/benoitregamey/geopycat.git
 ```
