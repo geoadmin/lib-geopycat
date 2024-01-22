@@ -700,6 +700,45 @@ class GeocatAPI():
             else:
                 print(utils.warningred(f"Metadata {uuid} : {search} unsuccessfully replaced by {replace}"))
 
+    def search_db(self, search: str, escape_wildcard: bool = True) -> list:
+        """
+        Performs search at the DB level. Returns list of metadata UUID where search
+        input was found.
+
+        Parameters:
+            search (str): value to search for
+            escape_wildcard (bool): if True, "%" wildcard are escaped "\%"
+        """
+
+        if not self.check_admin():
+            raise Exception("You must be admin to use this function")
+
+        metadata_uuids = list()
+
+        if escape_wildcard:
+            search_sql = search.replace("%", "\%")
+        else:
+            search_sql = search
+
+        try:
+            connection = self.db_connect()
+            with connection.cursor() as cursor:
+
+                cursor.execute("SELECT uuid FROM public.metadata where (istemplate='n' OR istemplate='y')" \
+                                f"AND data like '%{search_sql}%'")
+
+                for row in cursor:
+                    metadata_uuids.append(row[0])
+
+        except (Exception, psycopg2.Error) as error:
+            print("Error while fetching data from PostgreSQL", error)
+
+        finally:
+            if connection:
+                connection.close()
+        
+        return metadata_uuids
+
     def delete_metadata(self, uuid: str) -> object:
         """
         Delete metadata
