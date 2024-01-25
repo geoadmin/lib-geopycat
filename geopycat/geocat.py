@@ -204,7 +204,7 @@ class GeocatAPI():
 
     def get_users(self, admin: bool = True, useradmin: bool = True, reviewer: bool = True,
                 editor: bool = True, registered_user: bool = True, inactive: bool = True,
-                owner_only : bool = False) -> list:
+                owner_only : bool = False, harvester_only : bool = False) -> list:
         """
         Get list of geocat users
 
@@ -247,7 +247,7 @@ class GeocatAPI():
 
         if not admin:
             users = [user for user in users if user['profile'] != "Administrator" ]
-        
+
         if not useradmin:
             users = [user for user in users if user['profile'] != "UserAdmin" ]
 
@@ -262,6 +262,33 @@ class GeocatAPI():
 
         if not inactive:
             users = [user for user in users if user['enabled'] is True ]
+
+        if harvester_only:
+
+            body = copy.deepcopy(settings.SEARCH_UUID_API_BODY)
+
+            query = utils.get_search_query(q="isHarvested:true")
+            body["query"] = query
+
+            body["aggregations"] = {
+                "owner": {
+                    "terms": {
+                        "field": "owner",
+                        "size": 100
+                    },
+                    "meta": {
+                        "field": "owner"
+                    }
+                }
+            }
+
+            body = json.dumps(body)
+
+            r = self.session.post(url=f"{self.env}/geonetwork/srv/api/search/records/_search",
+                                    headers=headers, data=body)
+
+            harvester = [int(i["key"]) for i in r.json()["aggregations"]["owner"]["buckets"]]
+            users = [user for user in users if user['id'] in harvester]
 
         return users
 
