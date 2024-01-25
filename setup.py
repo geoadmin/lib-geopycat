@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="geopycat",
-    version="0.3.3",
+    version="0.3.4",
     author="Benoit G. Regamey",
     author_email="benoit.regamey@swisstopo.ch",
     description="Manage metadata and data of geocat.ch - a geonetwork instance for Switzerland",

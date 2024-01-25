@@ -621,24 +621,80 @@ class GeocatAPI():
 
         res = self.session.get(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor", 
                          params=params)
-        
+
         if res.status_code != 200:
             raise Exception("Could not start an edit session")
-        
+
         headers = {"accept": "application/json"}
 
         res = self.session.put(url = self.env + f"/geonetwork/srv/api/records/{uuid}/validate/internal",
                                headers=headers)
-        
+
         if res.status_code != 201:
 
             self.session.delete(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor")
             raise Exception("Could not perform validation")
-        
+
         res = self.session.delete(url = self.env + f"/geonetwork/srv/api/records/{uuid}/editor")
-        
+
         if res.status_code != 204:
             raise Exception("Could not close edit session")
+
+    def validate_external_metadata(self, uuid: str) -> None:
+        """
+        Performs external validation of a given metadata.
+        External validation corresponds to validator outside the editor.
+        It does not save the metadat first, hence does not perform update-info.xsl
+
+        Parameters:
+            uuid: metadata's UUID
+        """
+
+        headers = {
+        "accept": "application/json", 
+        "Content-Type": "application/json"
+        }
+
+        params = {
+            "uuids": [uuid]
+        }
+
+        res = self.session.put(url=f"{self.env}/geonetwork/srv/api/records/validate",
+                            params=params, headers=headers)
+
+        res.raise_for_status()
+
+        res = res.json()
+
+        if res["numberOfRecords"] != 1 or res["numberOfRecordNotFound"] != 0 \
+            or res["numberOfNullRecords"] != 0 or res["numberOfRecordsProcessed"] != 1:
+
+            raise Exception("validation process failed")
+
+    def reset_validation_status(self, uuid: str) -> None:
+        """
+        Reset validation status of given metadata.
+
+        Parameters:
+            uuid: metadata's UUID
+        """
+
+        headers = {
+            "accept": "application/json", 
+            "Content-Type": "application/json"
+        }
+
+        params = {
+            "uuids": [uuid]
+        }
+
+        res = self.session.delete(url=f"{self.env}/geonetwork/srv/api/records/validate",
+                            params=params, headers=headers)
+
+        res.raise_for_status()
+
+        if not utils.process_ok(res):
+            raise Exception("resetting validation status failed")
 
     def search_and_replace(self, search: str, replace: str, escape_wildcard: bool = True):
         """
