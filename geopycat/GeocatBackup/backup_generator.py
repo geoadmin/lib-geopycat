@@ -126,7 +126,7 @@ class GeocatBackup(geocat):
             if user["profile"] == "Administrator":
                 group_names, useradmin_id, editor_id, reviewer_id, registereduser_id = "all", "all", "all", "all", "all"
 
-            row = {
+            row = pd.Series({
                 "id": user["id"],
                 "username": user["username"],
                 "profile": user["profile"],
@@ -136,9 +136,9 @@ class GeocatBackup(geocat):
                 "groupID_Editor": editor_id,
                 "groupID_Reviewer": reviewer_id,
                 "groupID_RegisteredUser": registereduser_id,
-            }
+            })
 
-            df = df.append(row, ignore_index=True)
+            df = pd.concat([df, row.to_frame().T], ignore_index=True)
 
             count += 1
             print(f"Backup users : {round((count / total) * 100)}%", end="\r")
@@ -201,10 +201,14 @@ class GeocatBackup(geocat):
                 with open(os.path.join(output_dir, f"groups_logo/{group['id']}.{logo_extension}"), 
                     'wb') as file:
                     file.write(response_group_logo.content)
+            
+            row = pd.Series({
+                "id": str(group['id']), 
+                "group_name": group['name'],
+                "users_number": str(len(json.loads(response_group_users.text)))
+            })
 
-            row = {"id": str(group['id']), "group_name": group['name'],
-                   "users_number": str(len(json.loads(response_group_users.text)))}
-            df = df.append(row, ignore_index=True)
+            df = pd.concat([df, row.to_frame().T], ignore_index=True)
 
             count += 1
             print(f"Backup groups : {round((count / total) * 100)}%", end="\r")
