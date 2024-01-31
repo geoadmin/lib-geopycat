@@ -509,6 +509,8 @@ class GeocatAPI():
                 print(f"{utils.warningred('The following Metadata could not be backup : ') + uuid}")
                 continue
 
+            uuid = uuid.replace(":", "_").replace("/", "_").replace("\\", "_").replace("'", "_").replace('"', "_")
+
             with open(os.path.join(backup_dir, f"{uuid}.zip"), "wb") as output:
                 output.write(response.content)
 
@@ -556,6 +558,8 @@ class GeocatAPI():
             if response.status_code != 200:
                 print(f"{utils.warningred('The following Metadata could not be backup : ') + uuid}")
                 continue
+
+            uuid = uuid.replace(":", "_").replace("/", "_").replace("\\", "_").replace("'", "_").replace('"', "_")
 
             with open(os.path.join(backup_dir, f"{uuid}.xml"), "wb") as output:
                 output.write(response.content)
