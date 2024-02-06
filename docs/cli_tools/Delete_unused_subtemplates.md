@@ -16,21 +16,21 @@ DB_PASSWORD=password
 delete_unused_subtpl [-env [env]]  [-older-than [older-than]] [--no-backup] [-db-user [database username]] [-db-password [database password]]
 ```
 
-* `env` int or prod
-* `older-than` integer (number of months), delete subtemplates that have not been updated since x months
-* `--no-backup` do not backup subtemplates before deletion
-* `db username`: database username
-* `db password`: database password
+* `env` int or prod (optional, by default int)
+* `older-than` integer (number of months), delete subtemplates that have not been updated since x months (optional, by default 3)
+* `--no-backup` do not backup subtemplates before deletion (optional)
+* `db username`: database username (optional, see Database connection)
+* `db password`: database password (optional, see Database connection)
 
 ## Running on windows
 ```bash
-python delete_unused_subtpl.py [-env]  [-older-than] [--no-backup] [-db-user] [-db-password]
+python delete_unused_subtpl.py [-env [env]]  [-older-than [older-than]] [--no-backup] [-db-user [database username]] [-db-password [database password]]
 ```
 ## Running on windows (swisstopo)
 ```bash
-"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe" "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\scripts\delete_unused_subtpl.py" [-env]  [-older-than] [--no-backup] [-db-user] [-db-password]
+& "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe" "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\scripts\delete_unused_subtpl.py" [-env [env]]  [-older-than [older-than]] [--no-backup] [-db-user [database username]] [-db-password [database password]]
 ```
 ## Example (swisstopo)
 ```bash
-"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe" "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\scripts\delete_unused_subtpl.py" -env prod  -older-than 3
+& "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe" "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\scripts\delete_unused_subtpl.py" -env prod  -older-than 3
 ```

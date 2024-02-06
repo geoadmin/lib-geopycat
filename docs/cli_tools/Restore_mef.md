@@ -14,17 +14,17 @@ MEF has the advantage of packing record UUID, permissions and attachments.
 
 ## Running on UNIX system
 ```bash
-restore_mef [-env [env]] --mef-folder [mef-folder]
+restore_mef [-env [env]] --mef-folder mef-folder
 ```
 
-* `env`: int or prod
-* `mef-folder`: folder path containing the MEF files to restore
+* `env`: int or prod (optional, by default int)
+* `mef-folder`: folder path containing the MEF files to restore (required)
 
 ## Running on windows
 ```bash
-python restore_mef.py [-env [env]] --mef-folder [mef-folder]
+python restore_mef.py [-env [env]] --mef-folder mef-folder
 ```
 ## Running on windows (swisstopo)
 ```bash
-"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe" "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\scripts\restore_mef.py" [-env [env]] --mef-folder [mef-folder]
+& "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe" "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\scripts\restore_mef.py" [-env [env]] --mef-folder [mef-folder]
 ```

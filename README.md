@@ -8,7 +8,7 @@ All documentation is available [here](https://benoitregamey.github.io/geopycat).
 ```
 pip install git+https://github.com/benoitregamey/geopycat.git
 ```
-**From swisstopo network** - through proxy
+**From swisstopo network** - through proxy (using powershell)
 ```
-"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host github.com --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --proxy=proxy-bvcol.admin.ch:8080 git+https://github.com/benoitregamey/geopycat.git
+& "C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\Scripts\pip3" install --trusted-host github.com --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --proxy=proxy-bvcol.admin.ch:8080 git+https://github.com/benoitregamey/geopycat.git
 ```
