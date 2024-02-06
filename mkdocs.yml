@@ -50,5 +50,5 @@ markdown_extensions:
 extra_css:
   - stylesheets/extra.css
 
-repo_url: https://github.com/benoitregamey/geopycat
+repo_url: https://github.com/geoadmin/lib-geopycat
 repo_name: geopycat

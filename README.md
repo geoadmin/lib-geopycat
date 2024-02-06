@@ -2,7 +2,7 @@
 The python package to manage (meta)data of geocat.ch - the modified instance of geonetwork for
 Switzerland.
 ## Documentation
-All documentation is available [here](https://benoitregamey.github.io/geopycat).
+All documentation is available [here](https://geoadmin.github.io/lib-geopycat/).
 ## Installation
 **Using pip** -  install from github
 ```
