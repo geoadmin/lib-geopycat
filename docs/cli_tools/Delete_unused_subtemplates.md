@@ -1,6 +1,8 @@
 geopycat provides a CLI script to delete subtemplates that are not referenced in any metadata. In order to successfully
 run this script, you should have admin rights and be able to connect to the PostgreSQL database of geocat.ch.
 
+> The admin boundaries extent subtemplate are not deleted by this tool even if not used in any metadata. Admin boundaries extent are managed by the geocat team and should be available for everyone
+
 ## Database connection
 You can specify the username and password for connecting to the database in environment variables or in CLI parameters (see below).
 If not, the script will prompt for credentials.
