@@ -1,1 +1,0 @@
-from geopycat.subtemplate.subtemplate import ManageSubtemplate

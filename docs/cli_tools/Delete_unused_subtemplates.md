@@ -3,6 +3,12 @@ run this script, you should have admin rights and be able to connect to the Post
 
 > The admin boundaries extent subtemplate are not deleted by this tool even if not used in any metadata. Admin boundaries extent are managed by the geocat team and should be available for everyone
 
+When running the script, after analysing all subtemplates, it will show the number of unused subtemplates by contact, extent and format. For each subtemplate type, it will prompt if you want to delete them by ressing y (yes) or not by pressing n (no). Thus it's possible to have control over what type of subtemplate to delete. For example :
+
+```console
+3 contact found. Are you sure to delete them ? (y/n)
+```
+
 ## Database connection
 You can specify the username and password for connecting to the database in environment variables or in CLI parameters (see below).
 If not, the script will prompt for credentials.

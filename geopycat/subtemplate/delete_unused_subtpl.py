@@ -64,21 +64,22 @@ class DeleteUnusedSubtemplate(geocat):
                     f"and changedate < '{self.date_limit.strftime('%Y-%m-%d')}'"
                 )
 
+                ro_uuids = cursor.fetchall()
                 count = 0
 
-                for row in cursor:
-                    with connection.cursor() as cur2:
-                        cur2.execute(f"SELECT uuid FROM public.metadata WHERE data ~ '.*{row[0]}[^0-9].*'")
-                        if cur2.rowcount == 0:
-                            if row[1].startswith("<che:CHE_CI_ResponsibleParty"):
-                                uuids_contact.append(row[0])
-                            elif row[1].startswith("<gmd:EX_Extent"):
-                                uuids_extent.append(row[0])
-                            elif row[1].startswith("<gmd:MD_Format"):
-                                uuids_format.append(row[0])
+                for row in ro_uuids:
+
+                    cursor.execute(f"SELECT uuid FROM public.metadata WHERE data like '%{row[0]}%'")
+                    if cursor.rowcount == 0:
+                        if row[1].startswith("<che:CHE_CI_ResponsibleParty"):
+                            uuids_contact.append(row[0])
+                        elif row[1].startswith("<gmd:EX_Extent"):
+                            uuids_extent.append(row[0])
+                        elif row[1].startswith("<gmd:MD_Format"):
+                            uuids_format.append(row[0])
 
                     count += 1
-                    print(f"Analysing RO usage: {round((count / cursor.rowcount) * 100, 1)}%", end="\r")
+                    print(f"Analysing RO usage: {round((count / len(ro_uuids)) * 100, 1)}%", end="\r")
                 print(f"Analysing RO usage : {utils.okgreen('Done')}")
 
         except (Exception, psycopg2.Error) as error:
