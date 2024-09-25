@@ -337,59 +337,61 @@ class GeocatAPI():
             Dict with the 3 kinds of RO : {"contact": list,"extent": list,"format": list}
         """
 
-        if not self.check_admin():
-            print(utils.warningred("You need to be admin to use this method"))
-            return
+        subtemplate_types = {
+            "contact": "che:CHE_CI_ResponsibleParty",
+            "extent" : "gmd:EX_Extent",
+            "format": "gmd:MD_Format"
+        }
 
-        uuids_contact = list()
-        uuids_extent = list()
-        uuids_format = list()
+        body = copy.deepcopy(settings.SEARCH_UUID_API_BODY)
 
-        if with_template:
-            template = " or istemplate = 't'"
-        else:
-            template = str()
-
-        try:
-            connection = self.db_connect()
-
-            with connection.cursor() as cursor:
-
-                if valid_only and not published_only:
-                    cursor.execute(f"SELECT UUID,data FROM public.metadata WHERE (istemplate='s' {template}) " \
-                    "AND id IN (SELECT metadataid FROM public.validation WHERE status=1 AND required=true)")
-
-                elif published_only and not valid_only:
-                    cursor.execute(f"SELECT UUID,data FROM public.metadata WHERE (istemplate='s' {template}) " \
-                    "AND id IN (SELECT metadataid FROM public.operationallowed WHERE groupid=1 AND operationid=0)")
-                elif valid_only and published_only:
-                    cursor.execute(f"SELECT UUID,data FROM public.metadata WHERE (istemplate='s' {template}) " \
-                    "AND id IN (SELECT metadataid FROM public.validation WHERE status=1 AND required=true) " \
-                    "AND id IN (SELECT metadataid FROM public.operationallowed WHERE groupid=1 AND operationid=0)")
-                else:
-                    cursor.execute(f"SELECT UUID,data FROM public.metadata WHERE (istemplate='s' {template})")
-
-                for row in cursor:
-                    if row[1].startswith("<che:CHE_CI_ResponsibleParty"):
-                        uuids_contact.append(row[0])
-                    elif row[1].startswith("<gmd:EX_Extent"):
-                        uuids_extent.append(row[0])
-                    elif row[1].startswith("<gmd:MD_Format"):
-                        uuids_format.append(row[0])
-
-        except (Exception, psycopg2.Error) as error:
-            print("Error while fetching data from PostgreSQL", error)
-
-        else:
-            return {
-                "contact": uuids_contact,
-                "extent": uuids_extent,
-                "format": uuids_format,
+        body["query"] = {
+            "bool": {
+                    "must": []
+                }
             }
+        
+        query_string = str()
 
-        finally:
-            if connection:
-                connection.close()
+        if valid_only:
+            query_string = query_string + "(valid:\"1\") AND"
+        
+        if published_only:
+            query_string = query_string + "(isPublishedToAll:\"true\") AND"
+        
+        if with_template:
+            body["query"]["bool"]["must"].append({"terms": {"isTemplate": ["s", "t"]}})
+        else:
+            body["query"]["bool"]["must"].append({"terms": {"isTemplate": ["s"]}})
+
+        if len(query_string) > 0:
+            query_string = query_string[:-4]
+            body["query"]["bool"]["must"].insert(
+                0, 
+                {"query_string": {"query": query_string,
+                "default_operator": "AND"}}
+            )
+
+        output = {}
+
+        for type in subtemplate_types:
+            
+            body["query"]["bool"]["must"].append(
+                {
+                    "terms": {
+                        "root": [
+                            subtemplate_types[type]
+                        ]
+                    }
+                }
+            )
+        
+            indexes = self.es_deep_search(body=body)
+            output[type] = [i["_source"]["uuid"] for i in indexes]
+
+            body["query"]["bool"]["must"].pop()
+       
+        return output
 
     def get_metadata_from_mef(self, uuid: str) -> bytes:
         """
