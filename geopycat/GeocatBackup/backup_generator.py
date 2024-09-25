@@ -1,6 +1,5 @@
 import os
 import json
-import psycopg2
 import pandas as pd
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -380,30 +379,13 @@ class GeocatBackup(geocat):
         harvesting = dict()
 
         try:
-            connection = self.db_connect()
+            res = self.session.get(f"{self.env}/geonetwork/srv/fre/admin.harvester.list?_content_type=json")
 
-            with connection.cursor() as cursor:
-
-                cursor.execute("SELECT name,value FROM public.harvestersettings " \
-                                "WHERE value != '' ORDER BY id ASC")
-
-                for row in cursor:
-                    if row[0] == "name":
-                        name = row[1]
-                        harvesting[name] = {}
-                    else:
-                        if "name" in locals():
-                            harvesting[name][row[0]] = row[1]
-
-        except (Exception, psycopg2.Error) as error:
-            print("Error while fetching data from PostgreSQL", error)
+        except:
+            print("Error while fetching harvesting infomrations")
 
         else:
             with open(os.path.join(self.backup_dir, "harvesting_settings.json"), "w") as file:
-                json.dump(harvesting, file, indent=4)
-
-        finally:
-            if connection:
-                connection.close()
+                json.dump(res.json(), file, indent=4)
 
         print(f"Backup harvesting settings {utils.okgreen('Done')}")
