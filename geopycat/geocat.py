@@ -10,7 +10,7 @@ import copy
 import requests
 import urllib3
 from dotenv import load_dotenv
-import psycopg2
+import arcpy
 from geopycat import settings
 from geopycat import utils
 
@@ -101,9 +101,8 @@ class GeocatAPI():
         return session
 
     def db_connect(self) -> object:
-        """Connect to geocat DB and returns a psycopg2 connection object"""
+        """Connect to geocat DB and returns an arcpy connection object"""
 
-        # Access database credentials from env variable if exists
         db_username = os.getenv('DB_USERNAME')
         db_password = os.getenv('DB_PASSWORD')
 
@@ -113,11 +112,9 @@ class GeocatAPI():
 
         _env = [k for k, v in settings.ENV.items() if v == self.env][0]
 
-        connection = psycopg2.connect(
-                host="database-lb.geocat.swisstopo.cloud",
-                database=f"geocat-{_env}",
-                user=db_username,
-                password=db_password)
+        connection_string = f"DATABASE_PLATFORM=POSTGRESQL;DATABASE={_env};DBCLIENT=postgresql;DB_CONNECTION_PROPERTIES=database-lb.geocat.swisstopo.cloud;USER={db_username};PASSWORD={db_password};VERSION=sde.DEFAULT"
+
+        connection = arcpy.ArcSDESQLExecute(connection_string)
 
         return connection
 
@@ -511,8 +508,6 @@ class GeocatAPI():
                 print(f"{utils.warningred('The following Metadata could not be backup : ') + uuid}")
                 continue
 
-            uuid = uuid.replace(":", "_").replace("/", "_").replace("\\", "_").replace("'", "_").replace('"', "_")
-
             with open(os.path.join(backup_dir, f"{uuid}.zip"), "wb") as output:
                 output.write(response.content)
 
@@ -560,8 +555,6 @@ class GeocatAPI():
             if response.status_code != 200:
                 print(f"{utils.warningred('The following Metadata could not be backup : ') + uuid}")
                 continue
-
-            uuid = uuid.replace(":", "_").replace("/", "_").replace("\\", "_").replace("'", "_").replace('"', "_")
 
             with open(os.path.join(backup_dir, f"{uuid}.xml"), "wb") as output:
                 output.write(response.content)
@@ -751,29 +744,31 @@ class GeocatAPI():
 
         try:
             connection = self.db_connect()
-            with connection.cursor() as cursor:
 
-                cursor.execute("SELECT uuid FROM public.metadata where (istemplate='n' OR istemplate='y')" \
-                                f"AND data like '%{search_sql}%'")
+            query = f"""
+            SELECT uuid FROM public.metadata
+            WHERE (istemplate = 'n' OR istemplate = 'y')
+            AND data LIKE '%{search_sql}%'
+            """
 
-                for row in cursor:
-                    metadata_uuids.append(row[0])
+            result = connection.execute(query)
 
-        except (Exception, psycopg2.Error) as error:
-            print("Error while fetching data from PostgreSQL", error)
+            for row in result:
+                metadata_uuids.append(row[0])
 
-        finally:
-            if connection:
-                connection.close()
+        except arcpy.ExecuteError:
+            msgs = arcpy.GetMessages(2)
+            print(f"Error while fetching data from the geodatabase: {msgs}")
+        except Exception as error:
+            print(f"Unexpected error: {error}")
 
         headers = {"accept": "application/json", "Content-Type": "application/json"}
 
         if len(metadata_uuids) == 0:
-            print(utils.warningred(f"{search} not found in any metadata"))
+            print(f"Warning: '{search}' not found in any metadata")
             return
 
         for uuid in metadata_uuids:
-
             params = {
                 "search": search,
                 "replace": replace,
@@ -781,22 +776,26 @@ class GeocatAPI():
                 "updateDateStamp": False
             }
 
-            response = self.session.post(self.env + "/geonetwork/srv/api/processes/db/search-and-replace",
-                                params=params, headers=headers)
+            response = self.session.post(
+                self.env + "/geonetwork/srv/api/processes/db/search-and-replace",
+                params=params,
+                headers=headers
+            )
 
-            if utils.process_ok(response):
-                print(utils.okgreen(f"Metadata {uuid} : {search} successfully replaced by {replace}"))
+            if hasattr(response, 'ok') and response.ok:
+                print(f"Metadata {uuid}: '{search}' successfully replaced by '{replace}'")
             else:
-                print(utils.warningred(f"Metadata {uuid} : {search} unsuccessfully replaced by {replace}"))
+                print(f"Metadata {uuid}: '{search}' unsuccessfully replaced by '{replace}'")
+
 
     def search_db(self, search: str, escape_wildcard: bool = True) -> list:
         """
-        Performs search at the DB level. Returns list of metadata UUID where search
-        input was found.
+        Performs search at the DB level using arcpy.ArcSDESQLExecute.
+        Returns a list of metadata UUIDs where the search input was found.
 
         Parameters:
-            search (str): value to search for
-            escape_wildcard (bool): if True, "%" wildcard are escaped "\%"
+            search (str): Value to search for.
+            escape_wildcard (bool): If True, "%" wildcards are escaped as "\%".
         """
 
         if not self.check_admin():
@@ -810,22 +809,30 @@ class GeocatAPI():
             search_sql = search
 
         try:
+            # Establish the database connection
             connection = self.db_connect()
-            with connection.cursor() as cursor:
 
-                cursor.execute("SELECT uuid FROM public.metadata where (istemplate='n' OR istemplate='y')" \
-                                f"AND data like '%{search_sql}%'")
+            # Build the SQL query
+            query = f"""
+            SELECT uuid FROM public.metadata
+            WHERE (istemplate = 'n' OR istemplate = 'y')
+            AND data LIKE '%{search_sql}%'
+            """
 
-                for row in cursor:
-                    metadata_uuids.append(row[0])
+            # Execute the query using arcpy.ArcSDESQLExecute
+            result = connection.execute(query)
 
-        except (Exception, psycopg2.Error) as error:
-            print("Error while fetching data from PostgreSQL", error)
+            # Fetch the results
+            for row in result:
+                metadata_uuids.append(row[0])
 
-        finally:
-            if connection:
-                connection.close()
-        
+        except arcpy.ExecuteError:
+            # Retrieve arcpy-specific error messages
+            msgs = arcpy.GetMessages(2)
+            print(f"Error while fetching data from the geodatabase: {msgs}")
+        except Exception as error:
+            print(f"Unexpected error: {error}")
+
         return metadata_uuids
 
     def delete_metadata(self, uuid: str) -> object:
