@@ -29,10 +29,6 @@ PROXY = [
         "http": "proxy.admin.ch:8080",
         "https": "proxy.admin.ch:8080",
     },
-        {
-        "http": "prxp01.admin.ch:8080",
-        "https": "prxp01.admin.ch:8080",
-    },
     {}
 ]
 
