@@ -507,8 +507,12 @@ class GeocatAPI():
                 else:
                     proxy_error = False
 
-            if response.status_code != 200:
-                print(f"{utils.warningred('The following Metadata could not be backup : ') + uuid}")
+            if not response.ok:
+                print(f"{utils.warningred(f'The following Metadata could not be backup (HTTP {response.status_code}) : ') + uuid}")
+                continue
+
+            if not response.content:
+                print(f"{utils.warningred('The following Metadata returned empty content : ') + uuid}")
                 continue
 
             uuid = uuid.replace(":", "_").replace("/", "_").replace("\\", "_").replace("'", "_").replace('"', "_")
@@ -557,8 +561,12 @@ class GeocatAPI():
                 else:
                     proxy_error = False
 
-            if response.status_code != 200:
-                print(f"{utils.warningred('The following Metadata could not be backup : ') + uuid}")
+            if not response.ok:
+                print(f"{utils.warningred(f'The following Metadata could not be backup (HTTP {response.status_code}) : ') + uuid}")
+                continue
+
+            if not response.content:
+                print(f"{utils.warningred('The following Metadata returned empty content : ') + uuid}")
                 continue
 
             uuid = uuid.replace(":", "_").replace("/", "_").replace("\\", "_").replace("'", "_").replace('"', "_")

@@ -53,7 +53,7 @@ SEARCH_UUID_API_BODY = {
         ]
     },
     "track_total_hits": True,
-    "sort": {"_id": "asc"},
+    "sort": {"uuid": "asc"},
 }
 
 GET_MD_INDEX_API_BODY = {
